@@ -31,12 +31,12 @@ void async checkParts() {
 
     std::vector<int> emptyParts = getEmptyParts();
 
-    while (emptyParts.size() > 0) {
+    while (ttl && emptyParts.size() > 0) {
         for (auto index : emptyParts) {
-            snprintf(buffer, 6, "RESEND");                               //
-            Utils::writeBytesFromInt(buffer + 6, index, 4);              // Create request packet
-            sendto(_socket, buffer, 10, 0, (sockaddr*) &server_address,  //
-                   sizeof(server_address));                              //
+            snprintf(buffer, 7, "RESEND");                                //
+            Utils::writeBytesFromInt(buffer + 6, index, 4);               // Create request packet
+            sendto(_socket, buffer, 10, 0, (sockaddr*) &broadcast_address,//
+                   sizeof(broadcast_address));                            //
 
             std::cout << "Requested " << index << " part" << std::endl;
         }
@@ -44,9 +44,9 @@ void async checkParts() {
         emptyParts = getEmptyParts();
     }
 
-    std::ofstream output("output.txt", std::ofstream::binary);  //
+    std::ofstream output(fileName, std::ofstream::binary);      //
     output.write(file, file_length);                            // Save file
-    system("CertUtil -hashfile output.txt SHA256");             //
+    system(std::string("CertUtil -hashfile " + fileName + " SHA256").c_str());             //
 }
 
 
@@ -55,8 +55,8 @@ void run(cxxopts::ParseResult &options) {
 
     char* buffer = new char[2 * mtu];
 
-    while (int length = recvfrom(_socket, (char *)&buffer, sizeof(buffer), 0, (sockaddr*) &server_address, &server_address_length)) {
-        ttl = options["ttl"].as<int>(); // Update ttl
+    while (auto length = recvfrom(_socket, buffer, 2 * mtu, 0, (sockaddr*) &server_address, &server_address_length)) {
+        ttl = ttl_max; // Update ttl
 
         if (strncmp(buffer, "NEW_PACKET", 10) == 0) {
             file_length = Utils::getIntFromBytes(buffer + 10, 4);
@@ -64,20 +64,20 @@ void run(cxxopts::ParseResult &options) {
             file = new char[file_length];
             memset(file, 0, file_length);
 
-            std::cout << "Сейчас сервер начнет передавать файл размером" << file_length << std::endl;
-            std::cout << "Всего " << int((float)file_length / (float)mtu + 0.5) << " частей" << std::endl;
+            std::cout << "Receive information about new file size: " << file_length << std::endl;
+            std::cout << "Part count: " << int((float)file_length / (float)mtu + 0.5) << std::endl;
         } else if (strncmp(buffer, "TRANSFER", 8) == 0) {
-            int part = Utils::getIntFromBytes(buffer + 8, 4);  // Номер части файла
-            int size = Utils::getIntFromBytes(buffer + 12, 4); // Размер передаваемых данных
+            int part = Utils::getIntFromBytes(buffer + 8, 4);  // Part index
+            int size = Utils::getIntFromBytes(buffer + 12, 4); // Part size
             parts.insert(part);
-            std::cout << "Сервер передал " << part << " часть с размером " << size << std::endl;
+            std::cout << "Receive " << part << " part with size " << size << std::endl;
 
             memcpy(file + part * options["mtu"].as<int>(), buffer + 16, size);
         } else if (strncmp(buffer, "FINISH", 6) == 0) {
-            std::cout << "Сервер завершил передавать файл" << std::endl;
+            std::cout << "Server finish transfering" << std::endl;
 
-            std::cout << "Создаем поток который будет проверять все части" << std::endl;
-            std::thread(checkParts);
+            std::cout << "Create thread, witch ask not accepted parts" << std::endl;
+            std::thread(checkParts).detach();
         }
     }
     delete[] buffer;

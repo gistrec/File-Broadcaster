@@ -13,9 +13,9 @@ std::map<int, int> sent_part;
 
 void sendPart(int part_index) {
     long packet_length = file_length - part_index * mtu;  // Get part length
-    if (packet_length > mtu) packet_length = mtu;         // 
+    if (packet_length > mtu) packet_length = mtu;         //
 
-    snprintf(buffer, 8, "TRANSFER");
+    snprintf(buffer, 9, "TRANSFER");
     Utils::writeBytesFromInt(buffer + 8,  (size_t)part_index, 4);    // Write part number
     Utils::writeBytesFromInt(buffer + 12, (size_t)packet_length, 4); // Write part length
     memcpy(buffer + 16, (void *)(intptr_t)(file + part_index * mtu), packet_length); // Write part data
@@ -26,13 +26,12 @@ void sendPart(int part_index) {
 }
 
 void run(cxxopts::ParseResult &options) {
-    std::mt19937 gen(time(0)); // Для тестов
-    std::uniform_int_distribution<> uid(0, 100);  // Для тестов
-    std::cout << "Sender was started" << std::endl;
+    std::mt19937 gen(time(0));                    // TODO: remove (for tests only)
+    std::uniform_int_distribution<> uid(0, 100);  // TODO: remove (for tests only)
 
     buffer = new char[2 * mtu];
 
-    std::ifstream input("file.txt", std::ios::binary);      //
+    std::ifstream input(fileName, std::ios::binary);        //
     // Thk Windows.h, where define max(). It so horrible... //
     input.ignore((std::numeric_limits<int>::max)());        //
     file_length = (int) input.gcount();                     // Get file length
@@ -45,7 +44,7 @@ void run(cxxopts::ParseResult &options) {
 
 
 
-    snprintf(buffer, 10, "NEW_PACKET");                            //
+    snprintf(buffer, 11, "NEW_PACKET");                            //
     Utils::writeBytesFromInt(buffer + 10, file_length, 4);         // Send information
     sendto(_socket, buffer, 14, 0, (sockaddr*) &broadcast_address, // about new file
            sizeof(broadcast_address));                             //
@@ -64,15 +63,27 @@ void run(cxxopts::ParseResult &options) {
         std::this_thread::sleep_for(1s);      //
     }                                         //
 
-    snprintf(buffer, 6, "FINISH");                                // Send information
+    snprintf(buffer, 7, "FINISH");                                // Send information
     sendto(_socket, buffer, 6, 0, (sockaddr*) &broadcast_address, // the end of transaction
            sizeof(broadcast_address));                            //
-    std::cout << "Передача файла завершена" << std::endl;
+    std::cout << "File transfer complete" << std::endl;
 
-    std::thread(checkTTL);
+    // Set socket receive timeout to 1 sec
+    #if defined(_WIN32) || defined(_WIN64)
+    int tv = 1 * 1000;  // user timeout in milliseconds [ms]
+    setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(tv));
+    #else
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+    #endif
 
-    while (ttl) {
-        int result = recvfrom(_socket, (char *)buffer, 100, 0, (struct sockaddr*) &client_address, &client_address_length);
+    while (ttl--) {
+        auto result = recvfrom(_socket, (char *)buffer, 100, 0, (struct sockaddr*) &broadcast_address, &client_address_length);
+        std::cout << result << std::endl;
+        if (result <= 0) continue;
+
         ttl = ttl_max;
 
         if (strncmp(buffer, "RESEND", 6) == 0) {
@@ -96,6 +107,7 @@ void run(cxxopts::ParseResult &options) {
             sendto(_socket, buffer, 6, 0, (struct sockaddr*) &broadcast_address, sizeof(broadcast_address));
         }
     }
+    std::cout << "Process no longer be working" << std::endl;
 }
 
 

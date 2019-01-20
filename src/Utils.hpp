@@ -1,16 +1,20 @@
 #ifndef FILEBROADCASTER_UTILS_H
 #define FILEBROADCASTER_UTILS_H
 
-#if defined(_WIN32) || defined(_WIN64)  //
-#include <winsock2.h>                   //
-#include <windows.h>                    // Windows socket and threads
-#include <thread>                       //
+#if defined(_WIN32) || defined(_WIN64)
+#define addr_len int                    //
+#include <winsock2.h>                   // Windows
+#include <windows.h>                    //  socket
 #pragma comment(lib, "Ws2_32.lib")      //
 #else
-#include <arpa/inet.h>                  // Linux socket
-#include <pthread.h>                    //  and threads
+#define SOCKET int                      //
+#define SOCKADDR_IN sockaddr_in         //
+#define addr_len socklen_t              // Linux socket
+#include <arpa/inet.h>                  //
+#include <pthread.h>                    //
 #endif
 
+#include <thread>
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -18,8 +22,8 @@
 #include <map>
 #include <chrono>
 
-#include <random> // ?? ???
-#include <ctime>  // ?? ???
+#include <random> // TODO: remove (for tests only)
+#include <ctime>  // TODO: remove (for tests only)
 #include <math.h>
 
 #include <vector>

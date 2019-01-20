@@ -3,7 +3,7 @@
 
 #include "Utils.hpp"
 
-
+std::string fileName;
 int mtu; // Max packet size to send and receive
 
 std::atomic<int> ttl; // Max time to wait new packets
@@ -15,8 +15,8 @@ SOCKADDR_IN server_address    = { 0 };
 SOCKADDR_IN client_address    = { 0 };
 SOCKADDR_IN broadcast_address = { 0 };
 
-int server_address_length = sizeof(server_address);
-int client_address_length = sizeof(client_address);
+addr_len server_address_length = sizeof(server_address);
+addr_len client_address_length = sizeof(client_address);
 
 char*  file = nullptr; // Pointer to file in RAM
 size_t file_length;    // File szie in bytes
