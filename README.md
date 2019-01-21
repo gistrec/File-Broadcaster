@@ -1,6 +1,6 @@
 # File-Broadcaster
 
-UDP File sender and receiver
+UDP File sender and receiver  
 Can use broadcast address to send file on all computers in LAN
 
 
@@ -18,7 +18,7 @@ Can use broadcast address to send file on all computers in LAN
   - [Download](#download)
   - [Installation](#installation)
   - [Script Parameters](#script-parameters)
-  - [Packets Specification](#packet-specification)
+  - [Packets Specification](#packets-specification)
   - [Script Specification](#script-specification)
 
 # Download
@@ -26,6 +26,7 @@ Can use broadcast address to send file on all computers in LAN
  * On the command line, enter:
     ````
     git clone https://github.com/gistrec/File-Broadcaster.git
+    git submodule init
     git submodule update --recursive --remote
     ````
  * You can probably use [Github for Windows](http://windows.github.com/) or [Github for Mac](http://mac.github.com/) instead of the command line, however these aren't tested/supported and we only use the command line for development. Use [this link](https://git-scm.com/downloads) to download the command line version.
@@ -35,7 +36,7 @@ Can use broadcast address to send file on all computers in LAN
  * Windows:
    * Visual Studio 2015 or 2017
  * Linux:
-   * g++, , arpa
+   * g++
    * pthread
    * arpa
 
@@ -66,8 +67,8 @@ Packets structure
 ![alt text](https://www.gistrec.ru/wp-content/uploads/2019/01/Packets.png)
 
 ## Script Specification
-1. Sender send `NEW_PACKET` packet to broadcast (or no) address
+1. Sender send `NEW_PACKET` packet to broadcast (or unicast) address
 2. Sender send all parts of file via `TRANSFER` packet
-3. If any pacckets were lost, receiver ask them sending `RESEND` packet to broadcast (or no) address
+3. If any pacckets were lost, receiver ask them sending `RESEND` packet to broadcast (or unicast) address
 4. Sender wait `RESEND` packets or wait TTL and turns off
 5. Receiver ask all lost parts, until the whole file is no downloaded or wait TTL and turns off
