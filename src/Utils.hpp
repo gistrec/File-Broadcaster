@@ -2,6 +2,7 @@
 #define FILEBROADCASTER_UTILS_H
 
 #if defined(_WIN32) || defined(_WIN64)
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #define addr_len int                    //
 #include <winsock2.h>                   // Windows
 #include <windows.h>                    //  socket
