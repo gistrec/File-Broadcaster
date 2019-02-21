@@ -42,10 +42,12 @@ void run(cxxopts::ParseResult &options) {
 
 
     snprintf(buffer, 11, "NEW_PACKET");                            //
-    Utils::writeBytesFromInt(buffer + 10, file_length, 4);         // Send information
+    Utils::writeBytesFromInt(buffer + 10, file_length, 4);         //
+    Utils::writeBytesFromInt(buffer + 14, mtu, 4);                 // Send information
     sendto(_socket, buffer, 14, 0, (sockaddr*) &broadcast_address, // about new file
-           sizeof(broadcast_address));                             //
-    std::cout << "Send information about new file with size " << (int) file_length << std::endl;
+           sizeof(broadcast_address));                             // + size and mtu
+    std::cout << "Send information about new file with size ";     //
+    std::cout << (int) file_length << " mtu " << mtu <<std::endl;  //
 
     int part_index = 0;
 

@@ -50,7 +50,7 @@ void checkParts() {
 void run(cxxopts::ParseResult &options) {
     bool finish = false; // Sender finish transfering
 
-    char* buffer = new char[2 * mtu];
+    char* buffer;
 
     while (auto length = recvfrom(_socket, buffer, 2 * mtu, 0, (sockaddr*) &server_address, &server_address_length)) {
         // Sender is no longer available
@@ -65,9 +65,10 @@ void run(cxxopts::ParseResult &options) {
 
         if (strncmp(buffer, "NEW_PACKET", 10) == 0) {
             file_length = Utils::getIntFromBytes(buffer + 10, 4);
+            mtu = Utils::getIntFromBytes(buffer + 14, 4);
 
+            buffer = new char[2 * mtu];
             file = new char[file_length];
-            memset(file, 0, file_length);
 
             std::cout << "Receive information about new file size: " << file_length << std::endl;
             std::cout << "Part count: " << int((float)file_length / (float)mtu + 0.5) << std::endl;

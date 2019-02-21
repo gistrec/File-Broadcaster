@@ -33,9 +33,6 @@
 #include "../lib/cxxopts/include/cxxopts.hpp"
 #include "Config.hpp"
 
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-#define async
-
 
 using namespace std::chrono_literals;
 
@@ -66,18 +63,6 @@ namespace Utils {
         for (int i = 0; i < count; i++) {
             buffer[count - i - 1] = (char) (value >> (i * 8));
         }
-    }
-
-    /**
-     * Run in secondary thread
-     * Decrease ttl every second
-     * If ttl < 0 program should stop
-     */
-    void async checkTTL() {
-        while (ttl--) {
-            std::this_thread::sleep_for(1s);
-        }
-        std::cout << "Process no longer be working" << std::endl;
     }
 }
 

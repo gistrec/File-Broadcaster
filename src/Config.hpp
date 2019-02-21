@@ -6,7 +6,7 @@
 std::string fileName;
 int mtu; // Max packet size to send and receive
 
-std::atomic<int> ttl; // Max time to wait new packets
+int ttl; // Max time to wait new packets
 int ttl_max;
 
 SOCKET _socket;
