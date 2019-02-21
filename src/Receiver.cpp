@@ -79,8 +79,11 @@ void run(cxxopts::ParseResult &options) {
 
             memcpy(file + part * options["mtu"].as<int>(), buffer + 16, size);
         } else if (strncmp(buffer, "FINISH", 6) == 0) {
-            std::cout << "Server finish transfering" << std::endl;
-            finish = true;
+            // If we don't receive a finish message
+            if (!finish) {
+                std::cout << "Server finish transfering" << std::endl;
+                finish = true;
+            }
         }
     }
     delete[] buffer;
