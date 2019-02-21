@@ -22,11 +22,10 @@ std::vector<int> getEmptyParts() {
 }
 
 /**
- * Run in secondary thread
  * Start while receive packet 'FINISH'
  * Get empty part's and requests it's from the server
  */
-void async checkParts() {
+void checkParts() {
     char* buffer = new char[100];
 
     std::vector<int> emptyParts = getEmptyParts();
@@ -40,22 +39,28 @@ void async checkParts() {
 
             std::cout << "Requested " << index << " part" << std::endl;
         }
-        std::this_thread::sleep_for(1s);
         emptyParts = getEmptyParts();
     }
 
     std::ofstream output(fileName, std::ofstream::binary);      //
     output.write(file, file_length);                            // Save file
-    system(std::string("CertUtil -hashfile " + fileName + " SHA256").c_str());             //
 }
 
 
 void run(cxxopts::ParseResult &options) {
-    std::thread(checkTTL); // Create thread, to check server timeout
+    bool finish = false; // Sender finish transfering
 
     char* buffer = new char[2 * mtu];
 
     while (auto length = recvfrom(_socket, buffer, 2 * mtu, 0, (sockaddr*) &server_address, &server_address_length)) {
+        // Sender is no longer available
+        if (ttl <= 0) return;
+
+        // If Sender finish transfering check missing parts every 1 sec
+        if (finish) checkParts();
+
+        if (length <= 0) continue; // If no more packets in buffer
+
         ttl = ttl_max; // Update ttl
 
         if (strncmp(buffer, "NEW_PACKET", 10) == 0) {
@@ -75,9 +80,7 @@ void run(cxxopts::ParseResult &options) {
             memcpy(file + part * options["mtu"].as<int>(), buffer + 16, size);
         } else if (strncmp(buffer, "FINISH", 6) == 0) {
             std::cout << "Server finish transfering" << std::endl;
-
-            std::cout << "Create thread, witch ask not accepted parts" << std::endl;
-            std::thread(checkParts).detach();
+            finish = true;
         }
     }
     delete[] buffer;

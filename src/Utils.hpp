@@ -11,7 +11,6 @@
 #define SOCKADDR_IN sockaddr_in         //
 #define addr_len socklen_t              // Linux socket
 #include <arpa/inet.h>                  //
-#include <pthread.h>                    //
 #endif
 
 #include <thread>

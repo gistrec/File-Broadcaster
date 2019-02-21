@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
             std::cerr << "Cant't get access to broadcast" << std::endl;     //
             exit(1);                                                        //
         }                                                                   // If option 'broadcast' is yes
-        broadcast_address.sin_addr.s_addr = INADDR_ANY;                     // change server address
+        broadcast_address.sin_addr.s_addr = INADDR_BROADCAST;               // change server address
     } else {                                                                // to broadcast
         broadcast_address.sin_addr.s_addr =                                 // Else change server address
             inet_addr(result["broadcast"].as<std::string>().c_str());       // to address in option
@@ -76,6 +76,16 @@ int main(int argc, char* argv[]) {
         std::cerr << "Can't bind socket" << std::endl;                            //     client address
         exit(1);                                                                  //
     }                                                                             //
+
+    #if defined(_WIN32) || defined(_WIN64)                                      //
+    int tv = 1 * 1000;  // user timeout in milliseconds [ms]                    //
+    setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(tv));       // Set socket
+    #else                                                                       // receive timeout
+    struct timeval tv;                                                          //        to 1 sec
+    tv.tv_sec = 1;                                                              //
+    tv.tv_usec = 0;                                                             //
+    setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)); //
+    #endif
 
     // Run receiver or sender
     if (result["type"].as<std::string>() == "receiver") {        //
