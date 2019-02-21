@@ -26,9 +26,6 @@ void sendPart(int part_index) {
 }
 
 void run(cxxopts::ParseResult &options) {
-    std::mt19937 gen(time(0));                    // TODO: remove (for tests only)
-    std::uniform_int_distribution<> uid(0, 100);  // TODO: remove (for tests only)
-
     buffer = new char[2 * mtu];
 
     std::ifstream input(fileName, std::ios::binary);        //
@@ -45,46 +42,41 @@ void run(cxxopts::ParseResult &options) {
 
 
     snprintf(buffer, 11, "NEW_PACKET");                            //
-    Utils::writeBytesFromInt(buffer + 10, file_length, 4);         // Send information
+    Utils::writeBytesFromInt(buffer + 10, file_length, 4);         //
+    Utils::writeBytesFromInt(buffer + 14, mtu, 4);                 // Send information
     sendto(_socket, buffer, 14, 0, (sockaddr*) &broadcast_address, // about new file
-           sizeof(broadcast_address));                             //
-    std::cout << "Send information about new file with size " << (int) file_length << std::endl;
+           sizeof(broadcast_address));                             // + size and mtu
+    std::cout << "Send information about new file with size ";     //
+    std::cout << (int) file_length << " mtu " << mtu <<std::endl;  //
 
     int part_index = 0;
 
     while (part_index * mtu < file_length) {  //
-        sent_part.insert({ part_index, 0 });  //
-                                              //
-        if (uid(gen) < 90) {                  // Send all parts every 1 sec
-            sendPart(part_index);             //
-        }                                     //
-                                              //
+        sent_part.insert({ part_index, 0 });  // 
+                                              // 
+        sendPart(part_index);                 // Send parts 
+                                              //   every 20ms
         part_index++;                         //
-        std::this_thread::sleep_for(1s);      //
+        std::this_thread::sleep_for(20ms);    //
     }                                         //
 
     snprintf(buffer, 7, "FINISH");                                // Send information
     sendto(_socket, buffer, 6, 0, (sockaddr*) &broadcast_address, // the end of transaction
            sizeof(broadcast_address));                            //
     std::cout << "File transfer complete" << std::endl;
+    // Last time, while sender send message about finish
+    long lastFinishSendTime = 0;
 
-    // Set socket receive timeout to 1 sec
-    #if defined(_WIN32) || defined(_WIN64)
-    int tv = 1 * 1000;  // user timeout in milliseconds [ms]
-    setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(tv));
-    #else
-    struct timeval tv;
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
-    setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
-    #endif
-
-    while (ttl--) {
+    while (ttl) {
         auto result = recvfrom(_socket, (char *)buffer, 100, 0, (struct sockaddr*) &broadcast_address, &client_address_length);
-        std::cout << result << std::endl;
-        if (result <= 0) continue;
 
-        ttl = ttl_max;
+        // Every seconds send information about end of sending file
+        if (result <= 0) {
+            ttl--;
+            snprintf(buffer, 7, "FINISH");
+            sendto(_socket, buffer, 6, 0, (struct sockaddr*) &broadcast_address, sizeof(broadcast_address));
+            continue;
+        }
 
         if (strncmp(buffer, "RESEND", 6) == 0) {
             int part = Utils::getIntFromBytes(buffer + 6, 4);
@@ -93,19 +85,24 @@ void run(cxxopts::ParseResult &options) {
             auto now_ms   = std::chrono::time_point_cast<std::chrono::seconds>(now);
             auto epoch    = now_ms.time_since_epoch();
             auto value    = std::chrono::duration_cast<std::chrono::seconds>(epoch);
-            long duration = value.count();
+            long duration = value.count(); // Unix time in second
 
-            if (duration - sent_part[part] > 1) {
+            ttl = ttl_max;
+
+            if (duration - sent_part[part] >= 1) {
                 sent_part[part] = duration;
                 std::cout << "Клиент запросил " << part << " часть" << std::endl;
                 sendPart(part);
             }
-        } else if (strncmp(buffer, "STATUS", 6) == 0) {
-            std::cout << "Клиент запросил статус" << std::endl;
 
-            snprintf(buffer, 6, "FINISH");
-            sendto(_socket, buffer, 6, 0, (struct sockaddr*) &broadcast_address, sizeof(broadcast_address));
+            // Every seconds send information about end of sending file
+            if (duration - lastFinishSendTime >= 1) {
+                lastFinishSendTime = duration;
+                snprintf(buffer, 7, "FINISH");
+                sendto(_socket, buffer, 6, 0, (struct sockaddr*) &broadcast_address, sizeof(broadcast_address));
+            }
         }
+
     }
     std::cout << "Process no longer be working" << std::endl;
 }
