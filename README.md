@@ -7,8 +7,10 @@
       <img src="https://img.shields.io/codacy/grade/4c8169bcab3a4df18baad4e5658ec8ce" alt="Code quality"></a>
     <a href="https://github.com/gistrec/File-Broadcaster/releases">
         <img src="https://img.shields.io/github/v/release/gistrec/File-Broadcaster" alt="Release"></a>
+    <a>
+      <img src="https://img.shields.io/badge/platform-windows%20%7C%20linux-brightgreen" alt="Code quality"></a>
     <a href="https://github.com/gistrec/File-Broadcaster/blob/master/LICENSE">
-        <img src="https://img.shields.io/github/license/gistrec/File-Broadcaster" alt="License"></a>
+        <img src="https://img.shields.io/github/license/gistrec/File-Broadcaster?color=brightgreen" alt="License"></a>
 </p>
 
 UDP File sender and receiver  
