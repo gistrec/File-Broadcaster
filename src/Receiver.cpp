@@ -33,7 +33,7 @@ void checkParts() {
     while (ttl && emptyParts.size() > 0) {
         for (auto index : emptyParts) {
             snprintf(buffer, 7, "RESEND");                                //
-            Utils::writeBytesFromInt(buffer + 6, index, 4);               // Create request packet
+            Utils::writeBytesFromNumber(buffer + 6, index, 4);            // Create request packet
             sendto(_socket, buffer, 10, 0, (sockaddr*) &broadcast_address,//
                    sizeof(broadcast_address));                            //
 
@@ -69,7 +69,7 @@ void run(cxxopts::ParseResult &options) {
         ttl = ttl_max; // Update ttl
 
         if (strncmp(buffer, "NEW_PACKET", 10) == 0) {
-            file_length = Utils::getIntFromBytes(buffer + 10, 4); // Read section "file length"
+            file_length = Utils::getNumberFromBytes(buffer + 10, 4); // Read section "file length"
 
             file = new char[file_length];
             memset(file, 0, file_length);
@@ -77,8 +77,8 @@ void run(cxxopts::ParseResult &options) {
             std::cout << "Receive information about new file size: " << file_length << std::endl;
             std::cout << "Number of parts: " << int((float)file_length / (float)mtu + 0.5) << std::endl;
         } else if (strncmp(buffer, "TRANSFER", 8) == 0) {
-            int part = Utils::getIntFromBytes(buffer +  8, 4); // Read section "index"
-            int size = Utils::getIntFromBytes(buffer + 12, 4); // Read section "size"
+            int part = Utils::getNumberFromBytes(buffer +  8, 4); // Read section "index"
+            int size = Utils::getNumberFromBytes(buffer + 12, 4); // Read section "size"
             parts.insert(part);
             std::cout << "Receive " << part << " part with size " << size << std::endl;
 
