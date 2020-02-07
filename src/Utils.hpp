@@ -37,13 +37,13 @@ namespace Utils {
      * @param  buffer - bytes array
      * @param  count  - bytes count
      */
-    int getIntFromBytes(char* buffer, int count) {
-        int value = 0;
+    size_t getNumberFromBytes(char* buffer, int count) {
+        size_t number = 0;
         for (int i = 0; i < count; i++) {
-            value = value << 8;
-            value = value | (buffer[i] & 0xFF);
+            number = number << 8;
+            number = number | (buffer[i] & 0xFF);
         }
-        return value;
+        return number;
     }
 
     /**
@@ -52,9 +52,9 @@ namespace Utils {
      * @param value  - number
      * @param count  - count bytes
      */
-    void writeBytesFromInt(char* buffer, size_t value, int count) {
+    void writeBytesFromNumber(char* buffer, size_t number, int count) {
         for (int i = 0; i < count; i++) {
-            buffer[count - i - 1] = (char) (value >> (i * 8));
+            buffer[count - i - 1] = (char) (number >> (i * 8));
         }
     }
 }

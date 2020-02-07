@@ -16,8 +16,8 @@ void sendPart(int part_index) {
     if (packet_length > mtu) packet_length = mtu;        //
 
     snprintf(buffer, 9, "TRANSFER");
-    Utils::writeBytesFromInt(buffer +  8, (size_t)part_index,    4);                 // Write section "number"
-    Utils::writeBytesFromInt(buffer + 12, (size_t)packet_length, 4);                 // Write section "length"
+    Utils::writeBytesFromNumber(buffer +  8, (size_t)part_index,    4);               // Write section "number"
+    Utils::writeBytesFromNumber(buffer + 12, (size_t)packet_length, 4);               // Write section "length"
     memcpy(buffer + 16, (void *)(intptr_t)(file + part_index * mtu), packet_length); // Write section "data"
 
     // Sending part to the broadcast address
@@ -49,7 +49,7 @@ void run(cxxopts::ParseResult &options) {
     std::cout << "Ok: File successfully copied to RAM" << std::endl;
 
     snprintf(buffer, 11, "NEW_PACKET");                            //
-    Utils::writeBytesFromInt(buffer + 10, file_length, 4);         // Sending information
+    Utils::writeBytesFromNumber(buffer + 10, file_length, 4);      // Sending information
     sendto(_socket, buffer, 14, 0, (sockaddr*) &broadcast_address, // about size of new file
            sizeof(broadcast_address));                             //
 
@@ -85,7 +85,7 @@ void run(cxxopts::ParseResult &options) {
         }
 
         if (strncmp(buffer, "RESEND", 6) == 0) {
-            int part = Utils::getIntFromBytes(buffer + 6, 4);
+            int part = Utils::getNumberFromBytes(buffer + 6, 4);
 
             auto now      = std::chrono::system_clock::now();
             auto now_ms   = std::chrono::time_point_cast<std::chrono::seconds>(now);
