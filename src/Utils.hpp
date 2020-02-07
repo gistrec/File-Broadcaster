@@ -16,21 +16,15 @@
 
 #include <thread>
 #include <string>
-#include <iostream>
 #include <fstream>
-#include <string.h> // memcpy
-#include <map>
+#include <cstring> // memcpy
 #include <chrono>
 
-#include <random> // TODO: remove (for tests only)
-#include <ctime>  // TODO: remove (for tests only)
-#include <math.h>
-
+#include <map>
 #include <vector>
 #include <set>
-#include <atomic>
 
-#include "../lib/cxxopts/include/cxxopts.hpp"
+#include "cxxopts.hpp"
 #include "Config.hpp"
 
 
@@ -38,7 +32,6 @@ using namespace std::chrono_literals;
 
 
 namespace Utils {
-
     /**
      * Return a coded number
      * @param  buffer - bytes array

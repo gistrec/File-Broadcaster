@@ -1,4 +1,4 @@
-﻿#include "../lib/cxxopts/include/cxxopts.hpp"
+#include "cxxopts.hpp"
 
 #include "Receiver.cpp"
 #include "Sender.cpp"
