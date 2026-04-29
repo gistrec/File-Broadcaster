@@ -103,7 +103,7 @@ void run(cxxopts::ParseResult &options) {
             memset(file, 0, file_length);
 
             std::cout << "Receive information about new file size: " << file_length << std::endl;
-            std::cout << "Number of parts: " << int((float)file_length / (float)mtu + 0.5) << std::endl;
+            std::cout << "Number of parts: " << (file_length + mtu - 1) / mtu << std::endl;
         } else if (strncmp(buffer, "TRANSFER", 8) == 0 && file != nullptr) {
             int part = Utils::getNumberFromBytes(buffer +  8, 4); // Read section "index"
             int size = Utils::getNumberFromBytes(buffer + 12, 4); // Read section "size"
