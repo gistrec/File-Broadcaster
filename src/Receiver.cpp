@@ -83,7 +83,7 @@ void run(cxxopts::ParseResult &options) {
         if (ttl <= 0) return;
 
         // If Sender finish transfering check missing parts every 1 sec
-        if (finish) checkParts();
+        if (finish && file != nullptr) checkParts();
 
         if (length <= 0) {
             ttl--;
@@ -102,13 +102,13 @@ void run(cxxopts::ParseResult &options) {
 
             std::cout << "Receive information about new file size: " << file_length << std::endl;
             std::cout << "Number of parts: " << int((float)file_length / (float)mtu + 0.5) << std::endl;
-        } else if (strncmp(buffer, "TRANSFER", 8) == 0) {
+        } else if (strncmp(buffer, "TRANSFER", 8) == 0 && file != nullptr) {
             int part = Utils::getNumberFromBytes(buffer +  8, 4); // Read section "index"
             int size = Utils::getNumberFromBytes(buffer + 12, 4); // Read section "size"
             parts.insert(part);
             std::cout << "Receive " << part << " part with size " << size << std::endl;
 
-            memcpy(file + part * options["mtu"].as<int>(), buffer + 16, size);
+            memcpy(file + part * mtu, buffer + 16, size);
         } else if (strncmp(buffer, "FINISH", 6) == 0) {
             // If receiver didn't receive a finish message
             if (!finish) {
