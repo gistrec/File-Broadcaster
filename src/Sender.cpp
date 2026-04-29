@@ -88,7 +88,10 @@ void run(cxxopts::ParseResult &options) {
         }
 
         if (strncmp(buffer, "RESEND", 6) == 0) {
-            int part = Utils::getNumberFromBytes(buffer + 6, 4);
+            int part       = Utils::getNumberFromBytes(buffer + 6, 4);
+            int total_parts = (file_length + mtu - 1) / mtu;
+
+            if (part < 0 || part >= total_parts) continue;
 
             auto now      = std::chrono::system_clock::now();
             auto now_ms   = std::chrono::time_point_cast<std::chrono::seconds>(now);
