@@ -8,79 +8,91 @@
     <a href="https://github.com/gistrec/File-Broadcaster/releases">
         <img src="https://img.shields.io/github/v/release/gistrec/File-Broadcaster" alt="Release"></a>
     <a>
-      <img src="https://img.shields.io/badge/platform-windows%20%7C%20linux-brightgreen" alt="Code quality"></a>
+      <img src="https://img.shields.io/badge/platform-windows%20%7C%20linux-brightgreen" alt="Platform"></a>
     <a href="https://github.com/gistrec/File-Broadcaster/blob/master/LICENSE">
         <img src="https://img.shields.io/github/license/gistrec/File-Broadcaster?color=brightgreen" alt="License"></a>
 </p>
 
-UDP File sender and receiver  
-Can use broadcast address to send file on all computers in LAN
+UDP broadcast file transfer — sends a file to all computers in the same LAN simultaneously, with automatic retransmission of lost packets.
+
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Parameters](#parameters)
+- [How It Works](#how-it-works)
+- [Packet Structure](#packet-structure)
 
 ## Features
 
-- Send file to one or all computers in LAN
-- Reliability of data transmission
-- Server timeout detection  
-- Change MTU
+- Broadcast to all computers in LAN with a single send
+- Unicast mode for point-to-point transfer
+- Automatic retransmission of lost packets
+- Configurable MTU and TTL
+- Windows and Linux support
 
-## Overview
+## Quick Start
 
-- [Requirements](#requirements)
-- [Download](#download)
-- [Installation](#installation)
-- [Script Parameters](#script-parameters)
-- [Packets Specification](#packets-specification)
-- [Script Specification](#script-specification)
+**Sender** (machine that has the file):
+```
+./FileBroadcaster --type sender --file photo.jpg
+```
 
-## Download
- Clone the [source repository](http://github.com/gistrec/File-Broadcaster) from Github. 
-* On the command line, enter:
-    ````
-    git clone https://github.com/gistrec/File-Broadcaster.git
-    git submodule init
-    git submodule update --recursive --remote
-    ````
+**Receiver** (one or more machines in the same LAN):
+```
+./FileBroadcaster --type receiver --file photo.jpg
+```
 
-* You can probably use [Github for Windows](http://windows.github.com/) or [Github for Mac](http://mac.github.com/) instead of the command line, however these aren't tested/supported and we only use the command line for development. Use [this link](https://git-scm.com/downloads) to download the command line version.
-
+To send to a specific IP instead of broadcasting to the whole LAN:
+```
+./FileBroadcaster --type sender --file photo.jpg --broadcast 192.168.1.50
+```
 
 ## Requirements
-* Windows:
-    * Visual Studio 2015 or 2017
-* Linux:
-    * g++
-    * pthread
-    * arpa
 
-  
+**Windows:**
+- Visual Studio 2019 or later
+
+**Linux:**
+- g++ with C++14 support
+- pthreads
 
 ## Installation
-* Windows
-    * Open FileBroadcaster.sln via Visual Studio
-    * Build project 
-* Linux
-    * Open a terminal/console/command prompt, change to the directory where you cloned project, and type:
-      ````
-      make all
-      ````
 
-## Script Parameters
-| Parameter   | Default | Description |
-| ------ | -------- | -------- |
-| p, port | 33333 | Sender and receiver port |
-| f, filename| `none` | Transmitted and received file |
-| t, type | receiver | receiver or sender |
-| ttl | 15 | Seconds to wait cliend requests or sender responses  |
-| mtu | 1500 | MTU packet size |
-| broadcast | 255.255.255.255 | Broadcast address. Can use to unicast. |
+**Linux:**
+```
+git clone https://github.com/gistrec/File-Broadcaster.git
+git submodule update --init --recursive
+make program
+```
 
-## Packets Specification
-Packets structure
-![alt text](https://www.gistrec.ru/wp-content/uploads/2019/01/Packets.png)
+**Windows:**
+1. Clone the repository and run `git submodule update --init --recursive`
+2. Open `FileBroadcaster.sln` in Visual Studio
+3. Build the project
 
-## Script Specification
-1. Sender send `NEW_PACKET` packet to broadcast (or unicast) address
-2. Sender send all parts of file via `TRANSFER` packet
-3. If any pacckets were lost, receiver ask them sending `RESEND` packet to broadcast (or unicast) address
-4. Sender wait `RESEND` packets or wait TTL and turns off
-5. Receiver ask all lost parts, until the whole file is no downloaded or wait TTL and turns off
+## Parameters
+
+| Parameter | Default | Description |
+| --------- | ------- | ----------- |
+| `-p, --port` | `33333` | Port for sender and receiver |
+| `-f, --file` | `file.out` | File to send or save |
+| `-t, --type` | `sender` | `sender` or `receiver` |
+| `--ttl` | `15` | Seconds to wait before timing out |
+| `--mtu` | `1500` | Max packet size in bytes |
+| `--broadcast` | `yes` | `yes` for LAN broadcast, or a specific IP for unicast |
+
+## How It Works
+
+1. Sender broadcasts a `NEW_PACKET` with the total file size
+2. Sender splits the file into chunks and broadcasts each one as a `TRANSFER` packet
+3. Sender broadcasts a `FINISH` packet when all chunks are sent
+4. Receiver checks for missing chunks and requests them with `RESEND` packets
+5. Sender retransmits each requested chunk
+6. Steps 4–5 repeat until all chunks are received or TTL expires
+
+## Packet Structure
+
+![Packet structure](https://www.gistrec.ru/wp-content/uploads/2019/01/Packets.png)
