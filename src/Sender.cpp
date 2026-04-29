@@ -36,7 +36,7 @@ void run() {
 
     // Thk Windows.h, where define max(). It so horrible... //
     input.ignore((std::numeric_limits<int>::max)());        //
-    file_length = (int) input.gcount();                     // Getting file length
+    file_length = static_cast<size_t>(input.gcount());      // Getting file length
     input.seekg(0, input.beg);                              // And writing file to RAM
                                                             //
     file = new (std::nothrow) char[file_length];             //
@@ -117,6 +117,11 @@ void run() {
 
     }
     std::cout << "Ok: Process no longer be working" << std::endl;
+
+    delete[] buffer;
+    delete[] file;
+    buffer = nullptr;
+    file   = nullptr;
 }
 
 

@@ -85,7 +85,11 @@ void run() {
         if (ttl <= 0) return;
 
         // If Sender finish transfering check missing parts every 1 sec
-        if (finish && file != nullptr) checkParts();
+        if (finish && file != nullptr) {
+            delete[] buffer;
+            checkParts();
+            return;
+        }
 
         if (length <= 0) {
             ttl--;
