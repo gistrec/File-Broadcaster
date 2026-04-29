@@ -1,0 +1,27 @@
+name: Tests
+
+on:
+  push:
+    branches: [master, develop, tests]
+  pull_request:
+    branches: [master, develop, tests]
+
+jobs:
+  gtest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtest-dev
+
+      - name: Build tests
+        run: make gtests
+
+      - name: Run tests
+        run: ./GTests --gtest_filter=*

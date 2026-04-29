@@ -1,8 +1,8 @@
 # File-Broadcaster
 
 <p align="left">
-    <a href="https://circleci.com/gh/gistrec/File-Broadcaster/tree/master">
-        <img src="https://img.shields.io/circleci/build/github/gistrec/File-Broadcaster/master" alt="Build status"></a>
+    <a href="https://github.com/gistrec/File-Broadcaster/actions/workflows/tests.yml">
+        <img src="https://github.com/gistrec/File-Broadcaster/actions/workflows/tests.yml/badge.svg?branch=master" alt="Build status"></a>
     <a>
       <img src="https://img.shields.io/codacy/grade/4c8169bcab3a4df18baad4e5658ec8ce" alt="Code quality"></a>
     <a href="https://github.com/gistrec/File-Broadcaster/releases">
