@@ -16,12 +16,12 @@ void sendPart(int part_index) {
     if (packet_length > mtu) packet_length = mtu;        //
 
     snprintf(buffer, 9, "TRANSFER");
-    Utils::writeBytesFromNumber(buffer +  8, (size_t)part_index,    4);              // Write section "number"
-    Utils::writeBytesFromNumber(buffer + 12, (size_t)packet_length, 4);              // Write section "length"
-    memcpy(buffer + 16, (void *)(intptr_t)(file + part_index * mtu), packet_length); // Write section "data"
+    Utils::writeBytesFromNumber(buffer +  8, (size_t)part_index,    4);  // Write section "number"
+    Utils::writeBytesFromNumber(buffer + 12, (size_t)packet_length, 4);  // Write section "length"
+    memcpy(buffer + 16, file + part_index * mtu, packet_length);         // Write section "data"
 
     // Sending part to the broadcast address
-    sendto(_socket, buffer, packet_length + 16, 0, (struct sockaddr*) &broadcast_address, sizeof(broadcast_address));
+    sendto(_socket, buffer, packet_length + 16, 0, reinterpret_cast<sockaddr*>(&broadcast_address), sizeof(broadcast_address));
     std::cout << "Part " << part_index << " with size " << packet_length << " was sent" << std::endl;
 }
 
@@ -56,7 +56,8 @@ void run() {
 
     snprintf(buffer, 11, "NEW_PACKET");                            //
     Utils::writeBytesFromNumber(buffer + 10, file_length, 4);      // Sending information
-    sendto(_socket, buffer, 14, 0, (sockaddr*) &broadcast_address, // about size of new file
+    sendto(_socket, buffer, 14, 0,                                 // about size of new file
+           reinterpret_cast<sockaddr*>(&broadcast_address),        //
            sizeof(broadcast_address));                             //
 
     std::cout << "Ok: Sent information about new file with size " << file_length << std::endl;
@@ -72,10 +73,11 @@ void run() {
         std::this_thread::sleep_for(20ms);    //
     }                                         //
 
-    snprintf(buffer, 7, "FINISH");                                // Sending file transfer
-    sendto(_socket, buffer, 6, 0, (sockaddr*) &broadcast_address, // completion information
-           sizeof(broadcast_address));                            //
-    std::cout << "Ok: File transfer complete" << std::endl;       //
+    snprintf(buffer, 7, "FINISH");                                       // Sending file transfer
+    sendto(_socket, buffer, 6, 0,                                        // completion information
+           reinterpret_cast<sockaddr*>(&broadcast_address),              //
+           sizeof(broadcast_address));                                   //
+    std::cout << "Ok: File transfer complete" << std::endl;              //
 
     long lastFinishSendTime = 0; // Last time, when sender sent file transfer completion information
 
@@ -83,13 +85,13 @@ void run() {
     addr_len sender_address_length = sizeof(sender_address);
 
     while (ttl) {
-        auto result = recvfrom(_socket, (char *)buffer, 100, 0, (struct sockaddr*) &sender_address, &sender_address_length);
+        auto result = recvfrom(_socket, buffer, 100, 0, reinterpret_cast<sockaddr*>(&sender_address), &sender_address_length);
 
         // sending file completion information every second
         if (result <= 0) {
             ttl--;
             snprintf(buffer, 7, "FINISH");
-            sendto(_socket, buffer, 6, 0, (struct sockaddr*) &broadcast_address, sizeof(broadcast_address));
+            sendto(_socket, buffer, 6, 0, reinterpret_cast<sockaddr*>(&broadcast_address), sizeof(broadcast_address));
             continue;
         }
 
@@ -117,7 +119,7 @@ void run() {
             if (duration - lastFinishSendTime >= 1) {
                 lastFinishSendTime = duration;
                 snprintf(buffer, 7, "FINISH");
-                sendto(_socket, buffer, 6, 0, (struct sockaddr*) &broadcast_address, sizeof(broadcast_address));
+                sendto(_socket, buffer, 6, 0, reinterpret_cast<sockaddr*>(&broadcast_address), sizeof(broadcast_address));
             }
         }
 

@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
             inet_addr(result["broadcast"].as<std::string>().c_str());          //    to address in parameter
     }                                                                          //
 
-    if (bind(_socket, (sockaddr *)&client_address, sizeof(client_address)) == 0) {//
+    if (bind(_socket, reinterpret_cast<sockaddr*>(&client_address), sizeof(client_address)) == 0) {//
         std::cout << "Ok: Socket binded" << std::endl;                            //
     } else {                                                                      // Bind socket to
         std::cerr << "Error: Can't bind socket" << std::endl;                     //     client address

@@ -34,7 +34,7 @@ void checkParts() {
         for (auto index : emptyParts) {
             snprintf(buffer, 7, "RESEND");
             Utils::writeBytesFromNumber(buffer + 6, index, 4);
-            sendto(_socket, buffer, 10, 0, (sockaddr*) &broadcast_address,
+            sendto(_socket, buffer, 10, 0, reinterpret_cast<sockaddr*>(&broadcast_address),
                    sizeof(broadcast_address));
             std::cout << "Request part of file with index " << index << std::endl;
             std::this_thread::sleep_for(20ms);
@@ -43,7 +43,7 @@ void checkParts() {
         SOCKADDR_IN sender_address = { 0 };
         addr_len sender_address_length = sizeof(sender_address);
         auto length = recvfrom(_socket, buffer, 2 * mtu, 0,
-                               (sockaddr*) &sender_address, &sender_address_length);
+                               reinterpret_cast<sockaddr*>(&sender_address), &sender_address_length);
 
         if (length <= 0) {
             ttl--;
@@ -92,7 +92,7 @@ void run() {
 
     char* buffer = new char[2 * mtu];
 
-    while (auto length = recvfrom(_socket, buffer, 2 * mtu, 0, (sockaddr*) &server_address, &server_address_length)) {
+    while (auto length = recvfrom(_socket, buffer, 2 * mtu, 0, reinterpret_cast<sockaddr*>(&server_address), &server_address_length)) {
         // Sender is no longer available
         if (ttl <= 0) {
             delete[] buffer;
