@@ -61,10 +61,10 @@ int main(int argc, char* argv[]) {
         #endif                                                                 //
                                                                                //
         if (setsockopt(_socket, SOL_SOCKET, SO_BROADCAST,                      //
-                       &broadcastEnable, sizeof(broadcastEnable)) != 0) {      //
+                       &broadcastEnable, sizeof(broadcastEnable)) == 0) {      //
             std::cout << "Ok: Got access to broadcast" << std::endl;           //
         } else {                                                               //
-            std::cerr << "Error: Cant't get access to broadcast" << std::endl; //
+            std::cerr << "Error: Can't get access to broadcast" << std::endl;  //
             exit(1);                                                           //
         }                                                                      // If parameter "broadcast" is "yes", then
         broadcast_address.sin_addr.s_addr = INADDR_BROADCAST;                  //    change server address
