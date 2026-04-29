@@ -95,6 +95,8 @@ void run(cxxopts::ParseResult &options) {
         if (strncmp(buffer, "NEW_PACKET", 10) == 0) {
             file_length = Utils::getNumberFromBytes(buffer + 10, 4); // Read section "file length"
 
+            delete[] file;
+            parts.clear();
             file = new char[file_length];
             memset(file, 0, file_length);
 
