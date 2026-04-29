@@ -26,25 +26,46 @@ std::vector<int> getEmptyParts() {
  * Gets empty parts and requests them from the server
  */
 void checkParts() {
-    char buffer[100];
+    char* buffer = new char[2 * mtu];
 
     std::vector<int> emptyParts = getEmptyParts();
 
     while (ttl && emptyParts.size() > 0) {
         for (auto index : emptyParts) {
-            snprintf(buffer, 7, "RESEND");                                //
-            Utils::writeBytesFromNumber(buffer + 6, index, 4);            // Create request packet
-            sendto(_socket, buffer, 10, 0, (sockaddr*) &broadcast_address,//
-                   sizeof(broadcast_address));                            //
-
+            snprintf(buffer, 7, "RESEND");
+            Utils::writeBytesFromNumber(buffer + 6, index, 4);
+            sendto(_socket, buffer, 10, 0, (sockaddr*) &broadcast_address,
+                   sizeof(broadcast_address));
             std::cout << "Request part of file with index " << index << std::endl;
         }
+
+        SOCKADDR_IN sender_address = { 0 };
+        addr_len sender_address_length = sizeof(sender_address);
+        auto length = recvfrom(_socket, buffer, 2 * mtu, 0,
+                               (sockaddr*) &sender_address, &sender_address_length);
+
+        if (length <= 0) {
+            ttl--;
+            continue;
+        }
+
+        ttl = ttl_max;
+
+        if (strncmp(buffer, "TRANSFER", 8) == 0) {
+            int part = Utils::getNumberFromBytes(buffer + 8, 4);
+            int size = Utils::getNumberFromBytes(buffer + 12, 4);
+            parts.insert(part);
+            memcpy(file + part * mtu, buffer + 16, size);
+            std::cout << "Receive " << part << " part with size " << size << std::endl;
+        }
+
         emptyParts = getEmptyParts();
     }
 
-    std::ofstream output(fileName, std::ofstream::binary);      //
-    output.write(file, file_length);                            // Save file
+    delete[] buffer;
 
+    std::ofstream output(fileName, std::ofstream::binary);
+    output.write(file, file_length);
     std::cout << "File successfully received" << std::endl;
 
     delete[] file;
