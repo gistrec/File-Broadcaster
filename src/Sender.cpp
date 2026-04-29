@@ -73,8 +73,11 @@ void run(cxxopts::ParseResult &options) {
     
     long lastFinishSendTime = 0; // Last time, when sender sended file transfer completion information
 
+    SOCKADDR_IN sender_address = { 0 };
+    addr_len sender_address_length = sizeof(sender_address);
+
     while (ttl) {
-        auto result = recvfrom(_socket, (char *)buffer, 100, 0, (struct sockaddr*) &broadcast_address, &client_address_length);
+        auto result = recvfrom(_socket, (char *)buffer, 100, 0, (struct sockaddr*) &sender_address, &sender_address_length);
 
         // sending file completion information every second
         if (result <= 0) {
