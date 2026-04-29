@@ -27,7 +27,10 @@ int main(int argc, char* argv[]) {
     WORD socketVer;                          // Initializing the use
     WSADATA wsaData;                         //     of the Winsock DLL
     socketVer = MAKEWORD(2, 2);              //         by this process.
-    WSAStartup(socketVer, &wsaData);         //
+    if (WSAStartup(socketVer, &wsaData) != 0) {                //
+        std::cerr << "Error: WSAStartup failed" << std::endl; //
+        exit(1);                                              //
+    }                                                         //
     #endif                                   //
 
     mtu = result["mtu"].as<int>();               //
