@@ -7,7 +7,7 @@
 
 int main(int argc, char* argv[]) {
     // Parsing input parameters from the CLI
-    cxxopts::Options options("File-Broadcaster", "UDB Broadcast file transfer");
+    cxxopts::Options options("File-Broadcaster", "UDP Broadcast file transfer");
 
     options
         .positional_help("[optional args]")
