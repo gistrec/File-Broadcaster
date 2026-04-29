@@ -13,7 +13,7 @@ protected:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     CombinationsTest, BytesConverter,
     ::testing::Combine(
         ::testing::Values(0U, 1U, 2U, 1000U, 65535U, 2147483647U),
