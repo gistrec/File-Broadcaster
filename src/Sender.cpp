@@ -7,7 +7,7 @@ namespace Sender {
 /**
  * Since server may receive many requests for sending some part
  * It is necessary to limit the sending of the same parts for a while
- * This container contains part number and time when the part was sended
+ * This container contains part number and time when the part was sent
  */
 std::map<int, int> sent_part;
 
@@ -22,7 +22,7 @@ void sendPart(int part_index) {
 
     // Sending part to the broadcast address
     sendto(_socket, buffer, packet_length + 16, 0, (struct sockaddr*) &broadcast_address, sizeof(broadcast_address));
-    std::cout << "Part " << part_index << " with size " << packet_length << " was send" << std::endl;
+    std::cout << "Part " << part_index << " with size " << packet_length << " was sent" << std::endl;
 }
 
 void run() {
@@ -71,7 +71,7 @@ void run() {
            sizeof(broadcast_address));                            //
     std::cout << "Ok: File transfer complete" << std::endl;       //
     
-    long lastFinishSendTime = 0; // Last time, when sender sended file transfer completion information
+    long lastFinishSendTime = 0; // Last time, when sender sent file transfer completion information
 
     SOCKADDR_IN sender_address = { 0 };
     addr_len sender_address_length = sizeof(sender_address);

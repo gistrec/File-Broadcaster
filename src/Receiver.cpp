@@ -76,7 +76,7 @@ void checkParts() {
 
 
 void run() {
-    bool finish = false; // Sender finish transfering
+    bool finish = false; // Sender finished transferring
 
     char* buffer = new char[2 * mtu];
 
