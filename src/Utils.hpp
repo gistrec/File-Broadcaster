@@ -12,6 +12,7 @@
 #define SOCKET int                      //
 #define SOCKADDR_IN sockaddr_in         //
 #define addr_len socklen_t              // Linux socket
+#define INVALID_SOCKET (-1)             //
 #include <unistd.h>                     //
 #include <arpa/inet.h>                  //
 #define CLOSE_SOCKET(s) close(s)        //

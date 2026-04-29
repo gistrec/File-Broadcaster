@@ -16,8 +16,8 @@ void sendPart(int part_index) {
     if (packet_length > mtu) packet_length = mtu;        //
 
     snprintf(buffer, 9, "TRANSFER");
-    Utils::writeBytesFromNumber(buffer +  8, (size_t)part_index,    4);               // Write section "number"
-    Utils::writeBytesFromNumber(buffer + 12, (size_t)packet_length, 4);               // Write section "length"
+    Utils::writeBytesFromNumber(buffer +  8, (size_t)part_index,    4);              // Write section "number"
+    Utils::writeBytesFromNumber(buffer + 12, (size_t)packet_length, 4);              // Write section "length"
     memcpy(buffer + 16, (void *)(intptr_t)(file + part_index * mtu), packet_length); // Write section "data"
 
     // Sending part to the broadcast address
@@ -31,6 +31,9 @@ void run() {
     std::ifstream input(fileName, std::ios::binary);                     //
 	if (!input.is_open()) {                                              // Opening the file
 		std::cout << "Error: Can't open file " << fileName << std::endl; //
+		delete[] buffer;                                                 //
+		buffer = nullptr;                                                //
+		CLOSE_SOCKET(_socket);                                           //
 		exit(-1);                                                        //
 	}                                                                    //
 
@@ -39,9 +42,12 @@ void run() {
     file_length = static_cast<size_t>(input.gcount());      // Getting file length
     input.seekg(0, input.beg);                              // And writing file to RAM
                                                             //
-    file = new (std::nothrow) char[file_length];             //
+    file = new (std::nothrow) char[file_length];            //
 	if (!file) {                                            //
 		std::cout << "Error: Can't allocate " << file_length << " bytes" << std::endl;
+		delete[] buffer;
+		buffer = nullptr;
+		CLOSE_SOCKET(_socket);
 		exit(-1);
 	}
     input.read(file, file_length);
@@ -53,14 +59,14 @@ void run() {
     sendto(_socket, buffer, 14, 0, (sockaddr*) &broadcast_address, // about size of new file
            sizeof(broadcast_address));                             //
 
-    std::cout << "Ok: Send information about new file with size " << file_length << std::endl; 
+    std::cout << "Ok: Sent information about new file with size " << file_length << std::endl;
 
     int part_index = 0;
 
     while (part_index * mtu < file_length) {  //
-        sent_part.insert({ part_index, 0 });  // 
-                                              // 
-        sendPart(part_index);                 // Send parts 
+        sent_part.insert({ part_index, 0 });  //
+                                              //
+        sendPart(part_index);                 // Send parts
                                               //   every 20ms
         part_index++;                         //
         std::this_thread::sleep_for(20ms);    //
@@ -70,7 +76,7 @@ void run() {
     sendto(_socket, buffer, 6, 0, (sockaddr*) &broadcast_address, // completion information
            sizeof(broadcast_address));                            //
     std::cout << "Ok: File transfer complete" << std::endl;       //
-    
+
     long lastFinishSendTime = 0; // Last time, when sender sent file transfer completion information
 
     SOCKADDR_IN sender_address = { 0 };

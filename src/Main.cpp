@@ -27,11 +27,11 @@ int main(int argc, char* argv[]) {
     WORD socketVer;                          // Initializing the use
     WSADATA wsaData;                         //     of the Winsock DLL
     socketVer = MAKEWORD(2, 2);              //         by this process.
-    if (WSAStartup(socketVer, &wsaData) != 0) {                //
+    if (WSAStartup(socketVer, &wsaData) != 0) {               //
         std::cerr << "Error: WSAStartup failed" << std::endl; //
         exit(1);                                              //
     }                                                         //
-    #endif                                   //
+    #endif                                                    //
 
     mtu = result["mtu"].as<int>();               //
     ttl = result["ttl"].as<int>();               // Initializing some variable
@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
 
 
     _socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);          //
-    if (_socket < 0) {                                          // Create socket with
+    if (_socket == INVALID_SOCKET) {                            // Create socket with
         std::cout << "Error: Can't create socket" << std::endl; //     datagram-based protocol
         exit(1);                                                //
     } else {                                                    //
@@ -68,6 +68,7 @@ int main(int argc, char* argv[]) {
             std::cout << "Ok: Got access to broadcast" << std::endl;           //
         } else {                                                               //
             std::cerr << "Error: Can't get access to broadcast" << std::endl;  //
+            CLOSE_SOCKET(_socket);                                             //
             exit(1);                                                           //
         }                                                                      // If parameter "broadcast" is "yes", then
         broadcast_address.sin_addr.s_addr = INADDR_BROADCAST;                  //    change server address
@@ -80,11 +81,12 @@ int main(int argc, char* argv[]) {
         std::cout << "Ok: Socket binded" << std::endl;                            //
     } else {                                                                      // Bind socket to
         std::cerr << "Error: Can't bind socket" << std::endl;                     //     client address
+        CLOSE_SOCKET(_socket);                                                    //
         exit(1);                                                                  //
     }                                                                             //
 
     #if defined(_WIN32) || defined(_WIN64)                                      //
-    int tv = 1 * 1000;  // user timeout in milliseconds [ms]                    //
+    int tv = 1000;  // user timeout in milliseconds [ms]                        //
     setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(tv));       // Set socket
     #else                                                                       // receive timeout
     struct timeval tv;                                                          //        to 1 sec

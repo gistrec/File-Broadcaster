@@ -65,11 +65,19 @@ void checkParts() {
 
     delete[] buffer;
 
+    if (!emptyParts.empty()) {
+        std::cerr << "Error: Transfer timed out, file is incomplete" << std::endl;
+        delete[] file;
+        file = nullptr;
+        return;
+    }
+
     std::ofstream output(fileName, std::ofstream::binary);
     output.write(file, file_length);
     std::cout << "File successfully received" << std::endl;
 
     delete[] file;
+    file = nullptr;
     CLOSE_SOCKET(_socket);
     exit(0);
 }
@@ -82,9 +90,12 @@ void run() {
 
     while (auto length = recvfrom(_socket, buffer, 2 * mtu, 0, (sockaddr*) &server_address, &server_address_length)) {
         // Sender is no longer available
-        if (ttl <= 0) return;
+        if (ttl <= 0) {
+            delete[] buffer;
+            return;
+        }
 
-        // If Sender finish transfering check missing parts every 1 sec
+        // If Sender finished transferring, check missing parts
         if (finish && file != nullptr) {
             delete[] buffer;
             checkParts();
