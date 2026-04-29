@@ -37,6 +37,7 @@ void checkParts() {
             sendto(_socket, buffer, 10, 0, (sockaddr*) &broadcast_address,
                    sizeof(broadcast_address));
             std::cout << "Request part of file with index " << index << std::endl;
+            std::this_thread::sleep_for(20ms);
         }
 
         SOCKADDR_IN sender_address = { 0 };
