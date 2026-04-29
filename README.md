@@ -8,7 +8,7 @@
     <a href="https://github.com/gistrec/File-Broadcaster/releases">
         <img src="https://img.shields.io/github/v/release/gistrec/File-Broadcaster" alt="Release"></a>
     <a>
-      <img src="https://img.shields.io/badge/platform-windows%20%7C%20linux-brightgreen" alt="Platform"></a>
+      <img src="https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-brightgreen" alt="Platform"></a>
     <a href="https://github.com/gistrec/File-Broadcaster/blob/master/LICENSE">
         <img src="https://img.shields.io/github/license/gistrec/File-Broadcaster?color=brightgreen" alt="License"></a>
 </p>
@@ -31,7 +31,7 @@ UDP broadcast file transfer — sends a file to all computers in the same LAN si
 - Unicast mode for point-to-point transfer
 - Automatic retransmission of lost packets
 - Configurable MTU and TTL
-- Windows and Linux support
+- Windows, Linux, and macOS support
 
 ## Quick Start
 
@@ -55,13 +55,13 @@ To send to a specific IP instead of broadcasting to the whole LAN:
 **Windows:**
 - Visual Studio 2019 or later
 
-**Linux:**
-- g++ with C++14 support
+**Linux / macOS:**
+- g++ or clang++ with C++14 support
 - pthreads
 
 ## Installation
 
-**Linux:**
+**Linux / macOS:**
 ```
 git clone https://github.com/gistrec/File-Broadcaster.git
 git submodule update --init --recursive
