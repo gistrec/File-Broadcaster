@@ -15,7 +15,7 @@ std::set<int> parts;
 std::vector<int> getEmptyParts() {
     std::vector<int> result;
     // For each parts
-    for (int i = 0; i < int((float)file_length / (float)mtu + 0.5); i++) {
+    for (int i = 0; i < (int)((file_length + mtu - 1) / mtu); i++) {
         if (parts.find(i) == parts.end()) result.push_back(i);
     }
     return result;
