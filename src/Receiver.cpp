@@ -53,8 +53,12 @@ void checkParts() {
         ttl = ttl_max;
 
         if (strncmp(buffer, "TRANSFER", 8) == 0) {
-            int part = Utils::getNumberFromBytes(buffer + 8, 4);
-            int size = Utils::getNumberFromBytes(buffer + 12, 4);
+            int part        = Utils::getNumberFromBytes(buffer + 8, 4);
+            int size        = Utils::getNumberFromBytes(buffer + 12, 4);
+            int total_parts = (file_length + mtu - 1) / mtu;
+
+            if (part < 0 || part >= total_parts || size <= 0 || size > mtu) continue;
+
             parts.insert(part);
             memcpy(file + part * mtu, buffer + 16, size);
             std::cout << "Receive " << part << " part with size " << size << std::endl;
@@ -120,8 +124,12 @@ void run() {
             std::cout << "Receive information about new file size: " << file_length << std::endl;
             std::cout << "Number of parts: " << (file_length + mtu - 1) / mtu << std::endl;
         } else if (strncmp(buffer, "TRANSFER", 8) == 0 && file != nullptr) {
-            int part = Utils::getNumberFromBytes(buffer +  8, 4); // Read section "index"
-            int size = Utils::getNumberFromBytes(buffer + 12, 4); // Read section "size"
+            int part        = Utils::getNumberFromBytes(buffer +  8, 4); // Read section "index"
+            int size        = Utils::getNumberFromBytes(buffer + 12, 4); // Read section "size"
+            int total_parts = (file_length + mtu - 1) / mtu;
+
+            if (part < 0 || part >= total_parts || size <= 0 || size > mtu) continue;
+
             parts.insert(part);
             std::cout << "Receive " << part << " part with size " << size << std::endl;
 
