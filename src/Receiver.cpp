@@ -85,7 +85,10 @@ void run(cxxopts::ParseResult &options) {
         // If Sender finish transfering check missing parts every 1 sec
         if (finish) checkParts();
 
-        if (length <= 0) continue; // If no more packets in buffer
+        if (length <= 0) {
+            ttl--;
+            continue;
+        }
 
         ttl = ttl_max; // Update ttl
 
