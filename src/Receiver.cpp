@@ -69,6 +69,7 @@ void checkParts() {
     std::cout << "File successfully received" << std::endl;
 
     delete[] file;
+    CLOSE_SOCKET(_socket);
     exit(0);
 }
 

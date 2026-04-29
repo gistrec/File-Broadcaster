@@ -102,5 +102,6 @@ int main(int argc, char* argv[]) {
         std::cerr << "Error: Type not found" << std::endl;       //
     }
 
+    CLOSE_SOCKET(_socket);
     return 0;
 }

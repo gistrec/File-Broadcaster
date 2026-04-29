@@ -7,11 +7,14 @@
 #include <winsock2.h>                   // Windows
 #include <windows.h>                    //  socket
 #pragma comment(lib, "Ws2_32.lib")      //
+#define CLOSE_SOCKET(s) closesocket(s)  //
 #else
 #define SOCKET int                      //
 #define SOCKADDR_IN sockaddr_in         //
 #define addr_len socklen_t              // Linux socket
+#include <unistd.h>                     //
 #include <arpa/inet.h>                  //
+#define CLOSE_SOCKET(s) close(s)        //
 #endif
 
 #include <thread>
