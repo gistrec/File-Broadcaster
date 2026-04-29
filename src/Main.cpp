@@ -1,8 +1,8 @@
 #include "cxxopts.hpp"
-
-#include "Receiver.cpp"
-#include "Sender.cpp"
 #include "Config.hpp"
+
+namespace Receiver { void run(cxxopts::ParseResult&); }
+namespace Sender   { void run(cxxopts::ParseResult&); }
 
 
 int main(int argc, char* argv[]) {
