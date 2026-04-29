@@ -2,7 +2,7 @@
 
 <p align="left">
     <a href="https://github.com/gistrec/File-Broadcaster/actions/workflows/tests.yml">
-        <img src="https://github.com/gistrec/File-Broadcaster/actions/workflows/tests.yml/badge.svg?branch=master" alt="Build status"></a>
+        <img src="https://github.com/gistrec/File-Broadcaster/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
     <a>
       <img src="https://img.shields.io/codacy/grade/4c8169bcab3a4df18baad4e5658ec8ce" alt="Code quality"></a>
     <a href="https://github.com/gistrec/File-Broadcaster/releases">
