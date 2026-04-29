@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
 
     if (result["broadcast"].as<std::string>() == "yes") {                      //
         #if defined(_WIN32) || defined(_WIN64)                                 // Getting access to
-        char broadcastEnable = '1';                                            //  the broadcast address
+        char broadcastEnable = 1;                                              //  the broadcast address
         #else                                                                  //
         int broadcastEnable = 1;                                               //
         #endif                                                                 //
