@@ -25,7 +25,7 @@ void sendPart(int part_index) {
     std::cout << "Part " << part_index << " with size " << packet_length << " was send" << std::endl;
 }
 
-void run(cxxopts::ParseResult &options) {
+void run() {
     buffer = new char[2 * mtu];
 
     std::ifstream input(fileName, std::ios::binary);                     //
@@ -39,7 +39,7 @@ void run(cxxopts::ParseResult &options) {
     file_length = (int) input.gcount();                     // Getting file length
     input.seekg(0, input.beg);                              // And writing file to RAM
                                                             //
-    file = new (std::nothrow) char[file_length + 1];        //
+    file = new (std::nothrow) char[file_length];             //
 	if (!file) {                                            //
 		std::cout << "Error: Can't allocate " << file_length << " bytes" << std::endl;
 		exit(-1);

@@ -75,7 +75,7 @@ void checkParts() {
 }
 
 
-void run(cxxopts::ParseResult &options) {
+void run() {
     bool finish = false; // Sender finish transfering
 
     char* buffer = new char[2 * mtu];

@@ -1,8 +1,8 @@
 #include "cxxopts.hpp"
 #include "Config.hpp"
 
-namespace Receiver { void run(cxxopts::ParseResult&); }
-namespace Sender   { void run(cxxopts::ParseResult&); }
+namespace Receiver { void run(); }
+namespace Sender   { void run(); }
 
 
 int main(int argc, char* argv[]) {
@@ -95,9 +95,9 @@ int main(int argc, char* argv[]) {
 
     // Run receiver or sender
     if (result["type"].as<std::string>() == "receiver") {        //
-        Receiver::run(result);                                   //
+        Receiver::run();                                         //
     } else if (result["type"].as<std::string>() == "sender") {   // Run receiver or sender
-        Sender::run(result);                                     //            application
+        Sender::run();                                           //            application
     } else {                                                     //
         std::cerr << "Error: Type not found" << std::endl;       //
     }
