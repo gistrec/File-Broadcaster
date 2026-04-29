@@ -50,7 +50,14 @@ void run() {
 		CLOSE_SOCKET(_socket);
 		exit(-1);
 	}
-    input.read(file, file_length);
+    input.read(file, static_cast<std::streamsize>(file_length));
+    if (static_cast<size_t>(input.gcount()) != file_length) {
+        std::cerr << "Error: Could not read entire file" << std::endl;
+        delete[] file;   file   = nullptr;
+        delete[] buffer; buffer = nullptr;
+        CLOSE_SOCKET(_socket);
+        exit(-1);
+    }
 
     std::cout << "Ok: File successfully copied to RAM" << std::endl;
 
