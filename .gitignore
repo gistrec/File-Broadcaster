@@ -31,10 +31,36 @@
 *.out
 *.app
 
-#Visual studio dirs
+# Project binaries
+/FileBroadcaster
+/GTests
+
+# Debug symbols
+*.dSYM/
+*.pdb
+
+# Build directories
+build/
+out/
+
+# Visual Studio
 .vs/
 x64/
 x86/
 Debug/
 Release/
 packages/
+
+# IDE / editor metadata
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Tooling
+compile_commands.json
+.cache/
+
+# OS noise
+.DS_Store
+Thumbs.db

@@ -7,9 +7,10 @@ on:
     branches: [master, develop, tests]
 
 jobs:
-  gtest:
+  build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
@@ -39,6 +40,14 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install googletest
 
+      - name: Build program
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            make program LDLIBS_WIN="-lws2_32"
+          else
+            make program
+          fi
+
       - name: Build tests
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
@@ -50,3 +59,10 @@ jobs:
 
       - name: Run tests
         run: ./GTests --gtest_filter=*
+
+      - name: Run E2E loopback tests
+        # Skip on Windows: SO_REUSEADDR semantics on Winsock cause one socket
+        # to silently capture all loopback traffic, which breaks two-process
+        # localhost tests. The protocol works fine across separate hosts.
+        if: runner.os != 'Windows'
+        run: make e2e

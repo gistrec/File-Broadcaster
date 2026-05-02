@@ -3,6 +3,8 @@
 
 #include "Utils.hpp"
 
+#include <string>
+
 
 extern std::string fileName; // File Name to transfer or receive
 
