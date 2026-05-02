@@ -8,11 +8,11 @@
 #   ctest --test-dir build --output-on-failure
 #
 # Or directly:
-#   BINARY=build/FileBroadcaster bash tests/e2e_lossy.sh
+#   BINARY=build/filecast bash tests/e2e_lossy.sh
 #
 set -euo pipefail
 
-BINARY="${BINARY:-./FileBroadcaster}"
+BINARY="${BINARY:-./filecast}"
 PYTHON="${PYTHON:-python3}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 

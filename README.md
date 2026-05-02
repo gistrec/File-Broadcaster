@@ -1,16 +1,16 @@
-# File-Broadcaster
+# Filecast
 
 <p align="left">
-    <a href="https://github.com/gistrec/File-Broadcaster/actions/workflows/tests.yml">
-        <img src="https://github.com/gistrec/File-Broadcaster/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
+    <a href="https://github.com/gistrec/filecast/actions/workflows/tests.yml">
+        <img src="https://github.com/gistrec/filecast/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
     <a>
       <img src="https://img.shields.io/codacy/grade/4c8169bcab3a4df18baad4e5658ec8ce" alt="Code quality"></a>
-    <a href="https://github.com/gistrec/File-Broadcaster/releases">
-        <img src="https://img.shields.io/github/v/release/gistrec/File-Broadcaster" alt="Release"></a>
+    <a href="https://github.com/gistrec/filecast/releases">
+        <img src="https://img.shields.io/github/v/release/gistrec/filecast" alt="Release"></a>
     <a>
       <img src="https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-brightgreen" alt="Platform"></a>
-    <a href="https://github.com/gistrec/File-Broadcaster/blob/master/LICENSE">
-        <img src="https://img.shields.io/github/license/gistrec/File-Broadcaster?color=brightgreen" alt="License"></a>
+    <a href="https://github.com/gistrec/filecast/blob/master/LICENSE">
+        <img src="https://img.shields.io/github/license/gistrec/filecast?color=brightgreen" alt="License"></a>
 </p>
 
 UDP broadcast file transfer — sends a single file to every host on the same
@@ -40,31 +40,31 @@ LAN at once, with automatic retransmission of dropped packets.
 ## Quick Start
 
 Download the binary for your platform from the
-[releases page](https://github.com/gistrec/File-Broadcaster/releases) and run
-it directly. No installation required.
+[releases page](https://github.com/gistrec/filecast/releases) and run it
+directly. No installation required.
 
 **Sender** (host that has the file):
 
 ```sh
-./FileBroadcaster --type sender --file photo.jpg
+./filecast --type sender --file photo.jpg
 ```
 
 **Receiver** (one or more hosts on the same LAN):
 
 ```sh
-./FileBroadcaster --type receiver --file photo.jpg
+./filecast --type receiver --file photo.jpg
 ```
 
 Send to a specific host instead of broadcasting to the whole LAN:
 
 ```sh
-./FileBroadcaster --type sender --file photo.jpg --broadcast 192.168.1.50
+./filecast --type sender --file photo.jpg --broadcast 192.168.1.50
 ```
 
 ## Installation
 
 Pre-built binaries for Linux x86_64, macOS arm64, and Windows x86_64 are
-attached to every [GitHub Release](https://github.com/gistrec/File-Broadcaster/releases).
+attached to every [GitHub Release](https://github.com/gistrec/filecast/releases).
 
 If your platform isn't covered, see [Building from Source](#building-from-source).
 
@@ -89,20 +89,20 @@ If your platform isn't covered, see [Building from Source](#building-from-source
 
 ```sh
 # On the sender host
-./FileBroadcaster --type sender --file album.zip
+./filecast --type sender --file album.zip
 
 # On every receiver host
-./FileBroadcaster --type receiver --file album.zip
+./filecast --type receiver --file album.zip
 ```
 
 **Targeted unicast** (when broadcast is blocked or you only have one receiver):
 
 ```sh
 # On the sender host (sends data to 10.0.0.42)
-./FileBroadcaster --type sender --file album.zip --broadcast 10.0.0.42
+./filecast --type sender --file album.zip --broadcast 10.0.0.42
 
 # On 10.0.0.42 (receiver default --broadcast=yes broadcasts RESENDs)
-./FileBroadcaster --type receiver --file album.zip
+./filecast --type receiver --file album.zip
 ```
 
 **Loopback test** (sender and receiver on the same host — useful for
@@ -110,12 +110,12 @@ development):
 
 ```sh
 # Receiver listens on 33401, sends RESEND back to the sender's bind port (33402)
-./FileBroadcaster --type receiver --file out.bin \
-                  --broadcast 127.0.0.1 --port 33402 --bind-port 33401 &
+./filecast --type receiver --file out.bin \
+           --broadcast 127.0.0.1 --port 33402 --bind-port 33401 &
 
 # Sender listens on 33402, sends data to the receiver's bind port (33401)
-./FileBroadcaster --type sender --file in.bin \
-                  --broadcast 127.0.0.1 --port 33401 --bind-port 33402
+./filecast --type sender --file in.bin \
+           --broadcast 127.0.0.1 --port 33401 --bind-port 33402
 ```
 
 ## How It Works
@@ -160,16 +160,15 @@ development):
 ### Build
 
 ```sh
-git clone https://github.com/gistrec/File-Broadcaster.git
-cd File-Broadcaster
+git clone https://github.com/gistrec/filecast.git
+cd filecast
 git submodule update --init --recursive
 cmake -S . -B build
 cmake --build build --config Release
 ```
 
-The binary lands at `build/FileBroadcaster` (or
-`build\Release\FileBroadcaster.exe` with the multi-config Visual Studio
-generator).
+The binary lands at `build/filecast` (or `build\Release\filecast.exe` with the
+multi-config Visual Studio generator).
 
 ### Tests
 
@@ -177,9 +176,10 @@ generator).
 ctest --test-dir build --output-on-failure
 ```
 
-Runs the unit tests (requires Google Test installed) and the loopback
-end-to-end test. Pass `-E e2e` to skip the e2e case on Windows, where
-Winsock semantics break two-process loopback.
+Runs the unit tests, the loopback end-to-end test, and a lossy variant that
+drops packets through a Python UDP proxy to exercise the RESEND branch. Pass
+`-E e2e` to skip the e2e cases on Windows, where Winsock semantics break
+two-process loopback.
 
 ## License
 

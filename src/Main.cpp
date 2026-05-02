@@ -5,8 +5,8 @@
 #include <string>
 #include <cstdlib>
 
-#ifndef FILEBROADCASTER_VERSION
-#define FILEBROADCASTER_VERSION "1.0.0"
+#ifndef FILECAST_VERSION
+#define FILECAST_VERSION "1.0.0"
 #endif
 
 namespace Receiver { void run(); }
@@ -24,7 +24,7 @@ static void cleanupAndExit(int code) {
 
 int main(int argc, char* argv[]) {
     // Parsing input parameters from the CLI
-    cxxopts::Options options("File-Broadcaster", "UDP Broadcast file transfer");
+    cxxopts::Options options("filecast", "UDP broadcast file transfer over LAN");
 
     options
         .positional_help("[optional args]")
@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     if (result.count("version")) {
-        std::cout << "File-Broadcaster " << FILEBROADCASTER_VERSION << std::endl;
+        std::cout << "filecast " << FILECAST_VERSION << std::endl;
         return 0;
     }
 

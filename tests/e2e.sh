@@ -7,11 +7,11 @@
 #
 # Or directly:
 #
-#   BINARY=build/FileBroadcaster bash tests/e2e.sh
+#   BINARY=build/filecast bash tests/e2e.sh
 #
 set -euo pipefail
 
-BINARY="${BINARY:-./FileBroadcaster}"
+BINARY="${BINARY:-./filecast}"
 
 if [ ! -x "$BINARY" ]; then
     echo "Error: $BINARY not found or not executable. Run 'make program' first." >&2

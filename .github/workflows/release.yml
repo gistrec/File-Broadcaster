@@ -12,14 +12,14 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: FileBroadcaster
-            asset_name: FileBroadcaster-linux-x86_64
+            artifact_name: filecast
+            asset_name: filecast-linux-x86_64
           - os: macos-latest
-            artifact_name: FileBroadcaster
-            asset_name: FileBroadcaster-macos-arm64
+            artifact_name: filecast
+            asset_name: filecast-macos-arm64
           - os: windows-latest
-            artifact_name: FileBroadcaster.exe
-            asset_name: FileBroadcaster-windows-x86_64.exe
+            artifact_name: filecast.exe
+            asset_name: filecast-windows-x86_64.exe
 
     defaults:
       run:
@@ -45,13 +45,13 @@ jobs:
             cmake -S . -B build -G Ninja \
                   -DCMAKE_BUILD_TYPE=Release \
                   -DBUILD_TESTING=OFF \
-                  -DFILEBROADCASTER_VERSION="${VERSION}" \
+                  -DFILECAST_VERSION="${VERSION}" \
                   -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++"
           else
             cmake -S . -B build \
                   -DCMAKE_BUILD_TYPE=Release \
                   -DBUILD_TESTING=OFF \
-                  -DFILEBROADCASTER_VERSION="${VERSION}"
+                  -DFILECAST_VERSION="${VERSION}"
           fi
 
       - name: Build

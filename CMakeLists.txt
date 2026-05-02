@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(FileBroadcaster CXX)
+project(filecast CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -10,37 +10,37 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # Version string baked into the binary; the release workflow overrides this
-# from the git tag (e.g. -DFILEBROADCASTER_VERSION=v1.0.0).
-set(FILEBROADCASTER_VERSION "1.0.0" CACHE STRING "Version string for --version output")
+# from the git tag (e.g. -DFILECAST_VERSION=v1.0.0).
+set(FILECAST_VERSION "1.0.0" CACHE STRING "Version string for --version output")
 
 # --- main executable ---------------------------------------------------------
 
-add_executable(FileBroadcaster
+add_executable(filecast
     src/Main.cpp
     src/Sender.cpp
     src/Receiver.cpp
     src/Config.cpp
 )
 
-target_include_directories(FileBroadcaster PRIVATE
+target_include_directories(filecast PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/cxxopts/include
 )
 
-target_compile_definitions(FileBroadcaster PRIVATE
-    FILEBROADCASTER_VERSION="${FILEBROADCASTER_VERSION}"
+target_compile_definitions(filecast PRIVATE
+    FILECAST_VERSION="${FILECAST_VERSION}"
 )
 
 if(MSVC)
-    target_compile_options(FileBroadcaster PRIVATE /W4 /permissive-)
+    target_compile_options(filecast PRIVATE /W4 /permissive-)
 else()
-    target_compile_options(FileBroadcaster PRIVATE -Wall -Wextra)
+    target_compile_options(filecast PRIVATE -Wall -Wextra)
 endif()
 
 if(WIN32)
-    target_link_libraries(FileBroadcaster PRIVATE ws2_32)
+    target_link_libraries(filecast PRIVATE ws2_32)
 else()
     find_package(Threads REQUIRED)
-    target_link_libraries(FileBroadcaster PRIVATE Threads::Threads)
+    target_link_libraries(filecast PRIVATE Threads::Threads)
 endif()
 
 # --- tests -------------------------------------------------------------------
@@ -70,7 +70,7 @@ if(BUILD_TESTING)
             COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/e2e.sh
         )
         set_tests_properties(e2e PROPERTIES
-            ENVIRONMENT "BINARY=$<TARGET_FILE:FileBroadcaster>"
+            ENVIRONMENT "BINARY=$<TARGET_FILE:filecast>"
         )
 
         # Lossy variant: a Python UDP proxy drops packets in both directions to
@@ -82,7 +82,7 @@ if(BUILD_TESTING)
                 COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/e2e_lossy.sh
             )
             set_tests_properties(e2e_lossy PROPERTIES
-                ENVIRONMENT "BINARY=$<TARGET_FILE:FileBroadcaster>;PYTHON=${Python3_EXECUTABLE}"
+                ENVIRONMENT "BINARY=$<TARGET_FILE:filecast>;PYTHON=${Python3_EXECUTABLE}"
                 TIMEOUT 120
             )
         else()

@@ -1,5 +1,5 @@
-#ifndef FILEBROADCASTER_CONFIG_H
-#define FILEBROADCASTER_CONFIG_H
+#ifndef FILECAST_CONFIG_H
+#define FILECAST_CONFIG_H
 
 #include "Utils.hpp"
 
@@ -28,4 +28,4 @@ extern size_t file_length; // File size in bytes
 extern char*  file;        // Pointer to file in RAM
 extern char*  buffer;      // Pointer to buffer
 
-#endif //FILEBROADCASTER_CONFIG_H
+#endif //FILECAST_CONFIG_H

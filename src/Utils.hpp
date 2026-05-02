@@ -1,5 +1,5 @@
-#ifndef FILEBROADCASTER_UTILS_H
-#define FILEBROADCASTER_UTILS_H
+#ifndef FILECAST_UTILS_H
+#define FILECAST_UTILS_H
 
 #if defined(_WIN32) || defined(_WIN64)
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -47,4 +47,4 @@ namespace Utils {
     }
 }
 
-#endif //FILEBROADCASTER_UTILS_H
+#endif //FILECAST_UTILS_H
