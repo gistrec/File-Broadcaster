@@ -38,6 +38,7 @@ int main(int argc, char* argv[]) {
         ("bind-port",  "Local port to bind on",                 cxxopts::value<int>()->default_value("33333"))
         ("mtu",        "MTU packet",                            cxxopts::value<int>()->default_value("1500"))
         ("ttl",        "Time to live",                          cxxopts::value<int>()->default_value("15"))
+        ("delay-ms",   "Delay between successive packets, ms",  cxxopts::value<int>()->default_value("20"))
         ("h,help",     "Print help")
         ("version",    "Print version");
 
@@ -64,6 +65,7 @@ int main(int argc, char* argv[]) {
     int parsed_ttl       = result["ttl"].as<int>();
     int parsed_port      = result["port"].as<int>();
     int parsed_bind_port = result["bind-port"].as<int>();
+    int parsed_delay_ms  = result["delay-ms"].as<int>();
 
     if (parsed_mtu < 64 || parsed_mtu > 65507) {
         std::cerr << "Error: --mtu must be between 64 and 65507" << std::endl;
@@ -79,6 +81,10 @@ int main(int argc, char* argv[]) {
     }
     if (parsed_bind_port <= 0 || parsed_bind_port > 65535) {
         std::cerr << "Error: --bind-port must be between 1 and 65535" << std::endl;
+        return 1;
+    }
+    if (parsed_delay_ms < 0) {
+        std::cerr << "Error: --delay-ms must be 0 or greater" << std::endl;
         return 1;
     }
 
@@ -102,6 +108,7 @@ int main(int argc, char* argv[]) {
     mtu      = parsed_mtu;
     ttl      = parsed_ttl;
     ttl_max  = parsed_ttl;
+    delay_ms = parsed_delay_ms;
     fileName = result["file"].as<std::string>();
 
     _socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
