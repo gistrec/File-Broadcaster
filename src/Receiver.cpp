@@ -80,7 +80,14 @@ void checkParts() {
             size_t size        = Utils::getNumberFromBytes(buffer + 12, 4);
             size_t total_parts = (file_length + mtu - 1) / static_cast<size_t>(mtu);
 
-            if (part >= total_parts || size == 0 || size > static_cast<size_t>(mtu)) continue;
+            if (part >= total_parts) continue;
+            // For non-final parts size must equal MTU; for the final part it must
+            // equal the remaining bytes. Anything else is malformed and would
+            // either silently zero-pad data or write past the file buffer.
+            size_t expected = (part + 1 < total_parts)
+                ? static_cast<size_t>(mtu)
+                : (file_length - part * static_cast<size_t>(mtu));
+            if (size != expected) continue;
             if (static_cast<size_t>(length) < size + 16) continue;
 
             parts.insert(part);
@@ -197,7 +204,14 @@ void run() {
             size_t size        = Utils::getNumberFromBytes(buffer + 12, 4); // Read section "size"
             size_t total_parts = (file_length + mtu - 1) / static_cast<size_t>(mtu);
 
-            if (part >= total_parts || size == 0 || size > static_cast<size_t>(mtu)) continue;
+            if (part >= total_parts) continue;
+            // For non-final parts size must equal MTU; for the final part it must
+            // equal the remaining bytes. Anything else is malformed and would
+            // either silently zero-pad data or write past the file buffer.
+            size_t expected = (part + 1 < total_parts)
+                ? static_cast<size_t>(mtu)
+                : (file_length - part * static_cast<size_t>(mtu));
+            if (size != expected) continue;
             if (static_cast<size_t>(length) < size + 16) continue;
 
             parts.insert(part);

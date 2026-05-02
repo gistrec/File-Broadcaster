@@ -35,30 +35,38 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
-          install: mingw-w64-x86_64-gcc make
+          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja
 
-      - name: Build (release)
+      - name: Configure
         env:
           VERSION: ${{ github.ref_name }}
         run: |
           if [ "$RUNNER_OS" == "Windows" ]; then
-            make program \
-              CXXFLAGS="-std=c++17 -O2 -Wall -Wextra -pthread -DFILEBROADCASTER_VERSION=\\\"${VERSION}\\\"" \
-              LDLIBS_WIN="-lws2_32 -static -static-libgcc -static-libstdc++"
-            mv FileBroadcaster FileBroadcaster.exe
+            cmake -S . -B build -G Ninja \
+                  -DCMAKE_BUILD_TYPE=Release \
+                  -DBUILD_TESTING=OFF \
+                  -DFILEBROADCASTER_VERSION="${VERSION}" \
+                  -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++"
           else
-            make program \
-              CXXFLAGS="-std=c++17 -O2 -Wall -Wextra -pthread -DFILEBROADCASTER_VERSION=\"\\\"${VERSION}\\\"\""
+            cmake -S . -B build \
+                  -DCMAKE_BUILD_TYPE=Release \
+                  -DBUILD_TESTING=OFF \
+                  -DFILEBROADCASTER_VERSION="${VERSION}"
           fi
 
-      - name: Rename artifact
-        run: mv ${{ matrix.artifact_name }} ${{ matrix.asset_name }}
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Stage artifact
+        run: |
+          mkdir -p out
+          cp build/${{ matrix.artifact_name }} out/${{ matrix.asset_name }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset_name }}
-          path: ${{ matrix.asset_name }}
+          path: out/${{ matrix.asset_name }}
           if-no-files-found: error
 
   release:

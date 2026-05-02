@@ -150,38 +150,36 @@ development):
 
 ### Requirements
 
-- **Linux / macOS:** GCC 7+ or Clang 5+ with C++17 support, GNU Make, pthreads.
-- **Windows (MinGW64):** [MSYS2](https://www.msys2.org/) with
-  `mingw-w64-x86_64-gcc` and `make`.
-- **Windows (Visual Studio):** Visual Studio 2017 or later with the v141
-  platform toolset.
+- CMake 3.15+
+- A C++17 compiler:
+  - GCC 7+ or Clang 5+ on Linux/macOS,
+  - MinGW64 GCC via [MSYS2](https://www.msys2.org/) on Windows,
+  - or MSVC 2019+ through the Visual Studio CMake generator.
+- pthreads (Linux/macOS).
 
-### Linux / macOS / MSYS2
+### Build
 
 ```sh
 git clone https://github.com/gistrec/File-Broadcaster.git
 cd File-Broadcaster
 git submodule update --init --recursive
-make program
+cmake -S . -B build
+cmake --build build --config Release
 ```
 
-The binary is written to `./FileBroadcaster`.
-
-### Windows (Visual Studio)
-
-1. Clone the repository.
-2. Run `git submodule update --init --recursive`.
-3. Open `FileBroadcaster.sln` in Visual Studio.
-4. Build the solution.
+The binary lands at `build/FileBroadcaster` (or
+`build\Release\FileBroadcaster.exe` with the multi-config Visual Studio
+generator).
 
 ### Tests
 
 ```sh
-make gtests   # unit tests (requires Google Test)
-./GTests
-
-make e2e      # loopback end-to-end test (small + large file)
+ctest --test-dir build --output-on-failure
 ```
+
+Runs the unit tests (requires Google Test installed) and the loopback
+end-to-end test. Pass `-E e2e` to skip the e2e case on Windows, where
+Winsock semantics break two-process loopback.
 
 ## License
 

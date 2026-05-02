@@ -3,11 +3,11 @@
 # End-to-end loopback test: spawn a receiver, then a sender, and verify the
 # received bytes are bit-identical to what was sent. Run locally with:
 #
-#   make e2e
+#   ctest --test-dir build --output-on-failure
 #
 # Or directly:
 #
-#   BINARY=./FileBroadcaster tests/e2e.sh
+#   BINARY=build/FileBroadcaster bash tests/e2e.sh
 #
 set -euo pipefail
 
