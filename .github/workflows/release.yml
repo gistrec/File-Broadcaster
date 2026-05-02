@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: FileBroadcaster
+            asset_name: FileBroadcaster-linux-x86_64
+          - os: macos-latest
+            artifact_name: FileBroadcaster
+            asset_name: FileBroadcaster-macos-arm64
+          - os: windows-latest
+            artifact_name: FileBroadcaster.exe
+            asset_name: FileBroadcaster-windows-x86_64.exe
+
+    defaults:
+      run:
+        shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up MSYS2 (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc make
+
+      - name: Build (release)
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            make program \
+              CXXFLAGS="-std=c++17 -O2 -Wall -Wextra -pthread -DFILEBROADCASTER_VERSION=\\\"${VERSION}\\\"" \
+              LDLIBS_WIN="-lws2_32 -static -static-libgcc -static-libstdc++"
+            mv FileBroadcaster FileBroadcaster.exe
+          else
+            make program \
+              CXXFLAGS="-std=c++17 -O2 -Wall -Wextra -pthread -DFILEBROADCASTER_VERSION=\"\\\"${VERSION}\\\"\""
+          fi
+
+      - name: Rename artifact
+        run: mv ${{ matrix.artifact_name }} ${{ matrix.asset_name }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

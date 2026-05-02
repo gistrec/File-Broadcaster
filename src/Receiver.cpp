@@ -1,21 +1,37 @@
 #include "Utils.hpp"
 #include "Config.hpp"
 
+#include <iostream>
+#include <fstream>
+#include <thread>
+#include <chrono>
+#include <cstring>
+#include <cstdio>
+#include <vector>
+#include <set>
+
+using namespace std::chrono_literals;
+
 
 namespace Receiver {
+
+// Hard upper bound on the file size announced by a sender. We allocate the file
+// in RAM, so anything larger than this would either fail or cause OOM. Adjust
+// only if you know the receiver has enough memory.
+constexpr size_t MAX_FILE_LENGTH = 4ULL * 1024 * 1024 * 1024; // 4 GiB
 
 /**
  * List of received parts
  */
-std::set<int> parts;
+std::set<size_t> parts;
 
 /**
  * Get empty parts
  */
-std::vector<int> getEmptyParts() {
-    std::vector<int> result;
-    // For each parts
-    for (int i = 0; i < (int)((file_length + mtu - 1) / mtu); i++) {
+std::vector<size_t> getEmptyParts() {
+    std::vector<size_t> result;
+    size_t total_parts = (file_length + mtu - 1) / static_cast<size_t>(mtu);
+    for (size_t i = 0; i < total_parts; i++) {
         if (parts.find(i) == parts.end()) result.push_back(i);
     }
     return result;
@@ -26,11 +42,17 @@ std::vector<int> getEmptyParts() {
  * Gets empty parts and requests them from the server
  */
 void checkParts() {
-    char* buffer = new char[2 * mtu];
+    char* buffer = new (std::nothrow) char[2 * mtu];
+    if (!buffer) {
+        std::cerr << "Error: Can't allocate receive buffer" << std::endl;
+        delete[] file;
+        file = nullptr;
+        return;
+    }
 
-    std::vector<int> emptyParts = getEmptyParts();
+    std::vector<size_t> emptyParts = getEmptyParts();
 
-    while (ttl && emptyParts.size() > 0) {
+    while (ttl && !emptyParts.empty()) {
         for (auto index : emptyParts) {
             snprintf(buffer, 7, "RESEND");
             Utils::writeBytesFromNumber(buffer + 6, index, 4);
@@ -40,7 +62,8 @@ void checkParts() {
             std::this_thread::sleep_for(20ms);
         }
 
-        SOCKADDR_IN sender_address = { 0 };
+        SOCKADDR_IN sender_address;
+        memset(&sender_address, 0, sizeof(sender_address));
         addr_len sender_address_length = sizeof(sender_address);
         auto length = recvfrom(_socket, buffer, 2 * mtu, 0,
                                reinterpret_cast<sockaddr*>(&sender_address), &sender_address_length);
@@ -53,14 +76,15 @@ void checkParts() {
         ttl = ttl_max;
 
         if (strncmp(buffer, "TRANSFER", 8) == 0) {
-            int part        = Utils::getNumberFromBytes(buffer + 8, 4);
-            int size        = Utils::getNumberFromBytes(buffer + 12, 4);
-            int total_parts = (file_length + mtu - 1) / mtu;
+            size_t part        = Utils::getNumberFromBytes(buffer +  8, 4);
+            size_t size        = Utils::getNumberFromBytes(buffer + 12, 4);
+            size_t total_parts = (file_length + mtu - 1) / static_cast<size_t>(mtu);
 
-            if (part < 0 || part >= total_parts || size <= 0 || size > mtu) continue;
+            if (part >= total_parts || size == 0 || size > static_cast<size_t>(mtu)) continue;
+            if (static_cast<size_t>(length) < size + 16) continue;
 
             parts.insert(part);
-            memcpy(file + part * mtu, buffer + 16, size);
+            memcpy(file + part * static_cast<size_t>(mtu), buffer + 16, size);
             std::cout << "Receive " << part << " part with size " << size << std::endl;
         }
 
@@ -77,24 +101,51 @@ void checkParts() {
     }
 
     std::ofstream output(fileName, std::ofstream::binary);
-    output.write(file, file_length);
+    if (!output.is_open()) {
+        std::cerr << "Error: Can't open output file " << fileName << std::endl;
+        delete[] file;
+        file = nullptr;
+        return;
+    }
+    output.write(file, static_cast<std::streamsize>(file_length));
+    if (!output) {
+        std::cerr << "Error: Failed to write output file " << fileName << std::endl;
+        delete[] file;
+        file = nullptr;
+        return;
+    }
+    output.close();
     std::cout << "File successfully received" << std::endl;
 
     delete[] file;
     file = nullptr;
-    CLOSE_SOCKET(_socket);
-    exit(0);
 }
 
 
 void run() {
     bool finish = false; // Sender finished transferring
 
-    char* buffer = new char[2 * mtu];
+    char* buffer = new (std::nothrow) char[2 * mtu];
+    if (!buffer) {
+        std::cerr << "Error: Can't allocate receive buffer" << std::endl;
+        return;
+    }
 
-    while (auto length = recvfrom(_socket, buffer, 2 * mtu, 0, reinterpret_cast<sockaddr*>(&server_address), &server_address_length)) {
+    while (auto length = recvfrom(_socket, buffer, 2 * mtu, 0,
+                                  reinterpret_cast<sockaddr*>(&server_address),
+                                  &server_address_length)) {
         // Sender is no longer available
         if (ttl <= 0) {
+            delete[] buffer;
+            delete[] file;
+            file = nullptr;
+            return;
+        }
+
+        // Got FINISH but never received NEW_PACKET — joined too late or sender
+        // misbehaving. Bail with an error rather than waiting for ttl to drain.
+        if (finish && file == nullptr) {
+            std::cerr << "Error: Received FINISH without NEW_PACKET — joined too late" << std::endl;
             delete[] buffer;
             return;
         }
@@ -113,27 +164,46 @@ void run() {
 
         ttl = ttl_max; // Update ttl
 
-        if (strncmp(buffer, "NEW_PACKET", 10) == 0) {
-            file_length = Utils::getNumberFromBytes(buffer + 10, 4); // Read section "file length"
+        if (strncmp(buffer, "NEW_PACKET", 10) == 0 && static_cast<size_t>(length) >= 14) {
+            size_t announced = Utils::getNumberFromBytes(buffer + 10, 4);
+            if (announced == 0) {
+                std::cerr << "Error: Sender announced empty file" << std::endl;
+                delete[] buffer;
+                return;
+            }
+            if (announced > MAX_FILE_LENGTH) {
+                std::cerr << "Error: Sender announced file size " << announced
+                          << " bytes, exceeds limit of " << MAX_FILE_LENGTH << std::endl;
+                delete[] buffer;
+                return;
+            }
+
+            file_length = announced;
 
             delete[] file;
             parts.clear();
-            file = new char[file_length];
+            file = new (std::nothrow) char[file_length];
+            if (!file) {
+                std::cerr << "Error: Can't allocate " << file_length << " bytes" << std::endl;
+                delete[] buffer;
+                return;
+            }
             memset(file, 0, file_length);
 
             std::cout << "Receive information about new file size: " << file_length << std::endl;
             std::cout << "Number of parts: " << (file_length + mtu - 1) / mtu << std::endl;
         } else if (strncmp(buffer, "TRANSFER", 8) == 0 && file != nullptr) {
-            int part        = Utils::getNumberFromBytes(buffer +  8, 4); // Read section "index"
-            int size        = Utils::getNumberFromBytes(buffer + 12, 4); // Read section "size"
-            int total_parts = (file_length + mtu - 1) / mtu;
+            size_t part        = Utils::getNumberFromBytes(buffer +  8, 4); // Read section "index"
+            size_t size        = Utils::getNumberFromBytes(buffer + 12, 4); // Read section "size"
+            size_t total_parts = (file_length + mtu - 1) / static_cast<size_t>(mtu);
 
-            if (part < 0 || part >= total_parts || size <= 0 || size > mtu) continue;
+            if (part >= total_parts || size == 0 || size > static_cast<size_t>(mtu)) continue;
+            if (static_cast<size_t>(length) < size + 16) continue;
 
             parts.insert(part);
             std::cout << "Receive " << part << " part with size " << size << std::endl;
 
-            memcpy(file + part * mtu, buffer + 16, size);
+            memcpy(file + part * static_cast<size_t>(mtu), buffer + 16, size);
         } else if (strncmp(buffer, "FINISH", 6) == 0) {
             // If receiver didn't receive a finish message
             if (!finish) {
@@ -143,6 +213,8 @@ void run() {
         }
     }
     delete[] buffer;
+    delete[] file;
+    file = nullptr;
 }
 
 } //namespace Receiver

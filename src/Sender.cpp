@@ -1,118 +1,159 @@
 #include "Utils.hpp"
 #include "Config.hpp"
 
+#include <iostream>
+#include <fstream>
+#include <thread>
+#include <chrono>
+#include <cstring>
+#include <cstdio>
+#include <map>
+
+using namespace std::chrono_literals;
+
 
 namespace Sender {
+
+constexpr int HEADER_SIZE = 16;
 
 /**
  * Since server may receive many requests for sending some part
  * It is necessary to limit the sending of the same parts for a while
  * This container contains part number and time when the part was sent
  */
-std::map<int, int> sent_part;
+std::map<size_t, long> sent_part;
 
-void sendPart(int part_index) {
-    int packet_length = file_length - part_index * mtu;  // Get packet length
-    if (packet_length > mtu) packet_length = mtu;        //
+void sendPart(size_t part_index) {
+    size_t offset        = part_index * static_cast<size_t>(mtu);
+    size_t packet_length = file_length - offset;
+    if (packet_length > static_cast<size_t>(mtu)) packet_length = static_cast<size_t>(mtu);
 
     snprintf(buffer, 9, "TRANSFER");
-    Utils::writeBytesFromNumber(buffer +  8, (size_t)part_index,    4);  // Write section "number"
-    Utils::writeBytesFromNumber(buffer + 12, (size_t)packet_length, 4);  // Write section "length"
-    memcpy(buffer + 16, file + part_index * mtu, packet_length);         // Write section "data"
+    Utils::writeBytesFromNumber(buffer +  8, part_index,    4); // Write section "number"
+    Utils::writeBytesFromNumber(buffer + 12, packet_length, 4); // Write section "length"
+    memcpy(buffer + 16, file + offset, packet_length);          // Write section "data"
 
-    // Sending part to the broadcast address
-    sendto(_socket, buffer, packet_length + 16, 0, reinterpret_cast<sockaddr*>(&broadcast_address), sizeof(broadcast_address));
+    auto sent = sendto(_socket, buffer, static_cast<int>(packet_length + HEADER_SIZE), 0,
+                       reinterpret_cast<sockaddr*>(&broadcast_address), sizeof(broadcast_address));
+    if (sent < 0) {
+        std::cerr << "Warning: Failed to send part " << part_index << std::endl;
+        return;
+    }
     std::cout << "Part " << part_index << " with size " << packet_length << " was sent" << std::endl;
 }
 
 void run() {
     buffer = new char[2 * mtu];
 
-    std::ifstream input(fileName, std::ios::binary);                     //
-	if (!input.is_open()) {                                              // Opening the file
-		std::cout << "Error: Can't open file " << fileName << std::endl; //
-		delete[] buffer;                                                 //
-		buffer = nullptr;                                                //
-		CLOSE_SOCKET(_socket);                                           //
-		exit(-1);                                                        //
-	}                                                                    //
+    std::ifstream input(fileName, std::ios::binary);
+    if (!input.is_open()) {
+        std::cerr << "Error: Can't open file " << fileName << std::endl;
+        delete[] buffer;
+        buffer = nullptr;
+        CLOSE_SOCKET(_socket);
+        CLEANUP_NETWORK();
+        exit(-1);
+    }
 
-    // Thk Windows.h, where define max(). It so horrible... //
-    input.ignore((std::numeric_limits<int>::max)());        //
-    file_length = static_cast<size_t>(input.gcount());      // Getting file length
-    input.seekg(0, input.beg);                              // And writing file to RAM
-                                                            //
-    file = new (std::nothrow) char[file_length];            //
-	if (!file) {                                            //
-		std::cout << "Error: Can't allocate " << file_length << " bytes" << std::endl;
-		delete[] buffer;
-		buffer = nullptr;
-		CLOSE_SOCKET(_socket);
-		exit(-1);
-	}
+    input.seekg(0, std::ios::end);
+    auto end_pos = input.tellg();
+    if (end_pos < 0) {
+        std::cerr << "Error: Can't determine file size" << std::endl;
+        delete[] buffer;
+        buffer = nullptr;
+        CLOSE_SOCKET(_socket);
+        CLEANUP_NETWORK();
+        exit(-1);
+    }
+    file_length = static_cast<size_t>(end_pos);
+    input.seekg(0, std::ios::beg);
+
+    if (file_length == 0) {
+        std::cerr << "Error: File is empty" << std::endl;
+        delete[] buffer;
+        buffer = nullptr;
+        CLOSE_SOCKET(_socket);
+        CLEANUP_NETWORK();
+        exit(-1);
+    }
+
+    file = new (std::nothrow) char[file_length];
+    if (!file) {
+        std::cerr << "Error: Can't allocate " << file_length << " bytes" << std::endl;
+        delete[] buffer;
+        buffer = nullptr;
+        CLOSE_SOCKET(_socket);
+        CLEANUP_NETWORK();
+        exit(-1);
+    }
     input.read(file, static_cast<std::streamsize>(file_length));
     if (static_cast<size_t>(input.gcount()) != file_length) {
         std::cerr << "Error: Could not read entire file" << std::endl;
         delete[] file;   file   = nullptr;
         delete[] buffer; buffer = nullptr;
         CLOSE_SOCKET(_socket);
+        CLEANUP_NETWORK();
         exit(-1);
     }
 
     std::cout << "Ok: File successfully copied to RAM" << std::endl;
 
-    snprintf(buffer, 11, "NEW_PACKET");                            //
-    Utils::writeBytesFromNumber(buffer + 10, file_length, 4);      // Sending information
-    sendto(_socket, buffer, 14, 0,                                 // about size of new file
-           reinterpret_cast<sockaddr*>(&broadcast_address),        //
-           sizeof(broadcast_address));                             //
+    snprintf(buffer, 11, "NEW_PACKET");
+    Utils::writeBytesFromNumber(buffer + 10, file_length, 4);
+    if (sendto(_socket, buffer, 14, 0,
+               reinterpret_cast<sockaddr*>(&broadcast_address),
+               sizeof(broadcast_address)) < 0) {
+        std::cerr << "Warning: Failed to send NEW_PACKET" << std::endl;
+    }
 
     std::cout << "Ok: Sent information about new file with size " << file_length << std::endl;
 
-    int part_index = 0;
+    size_t total_parts = (file_length + mtu - 1) / static_cast<size_t>(mtu);
 
-    while (part_index * mtu < file_length) {  //
-        sent_part.insert({ part_index, 0 });  //
-                                              //
-        sendPart(part_index);                 // Send parts
-                                              //   every 20ms
-        part_index++;                         //
-        std::this_thread::sleep_for(20ms);    //
-    }                                         //
+    for (size_t part_index = 0; part_index < total_parts; ++part_index) {
+        sent_part.insert({ part_index, 0 });
+        sendPart(part_index);
+        std::this_thread::sleep_for(20ms);
+    }
 
-    snprintf(buffer, 7, "FINISH");                                       // Sending file transfer
-    sendto(_socket, buffer, 6, 0,                                        // completion information
-           reinterpret_cast<sockaddr*>(&broadcast_address),              //
-           sizeof(broadcast_address));                                   //
-    std::cout << "Ok: File transfer complete" << std::endl;              //
+    snprintf(buffer, 7, "FINISH");
+    if (sendto(_socket, buffer, 6, 0,
+               reinterpret_cast<sockaddr*>(&broadcast_address),
+               sizeof(broadcast_address)) < 0) {
+        std::cerr << "Warning: Failed to send FINISH" << std::endl;
+    }
+    std::cout << "Ok: File transfer complete" << std::endl;
 
     long lastFinishSendTime = 0; // Last time, when sender sent file transfer completion information
 
-    SOCKADDR_IN sender_address = { 0 };
+    SOCKADDR_IN sender_address;
+    memset(&sender_address, 0, sizeof(sender_address));
     addr_len sender_address_length = sizeof(sender_address);
 
     while (ttl) {
-        auto result = recvfrom(_socket, buffer, 100, 0, reinterpret_cast<sockaddr*>(&sender_address), &sender_address_length);
+        auto result = recvfrom(_socket, buffer, 100, 0,
+                               reinterpret_cast<sockaddr*>(&sender_address), &sender_address_length);
 
-        // sending file completion information every second
+        // No incoming requests for a while - resend FINISH and decrement ttl.
         if (result <= 0) {
             ttl--;
             snprintf(buffer, 7, "FINISH");
-            sendto(_socket, buffer, 6, 0, reinterpret_cast<sockaddr*>(&broadcast_address), sizeof(broadcast_address));
+            if (sendto(_socket, buffer, 6, 0,
+                       reinterpret_cast<sockaddr*>(&broadcast_address),
+                       sizeof(broadcast_address)) < 0) {
+                std::cerr << "Warning: Failed to send FINISH" << std::endl;
+            }
             continue;
         }
 
         if (strncmp(buffer, "RESEND", 6) == 0) {
-            int part       = Utils::getNumberFromBytes(buffer + 6, 4);
-            int total_parts = (file_length + mtu - 1) / mtu;
+            size_t part = Utils::getNumberFromBytes(buffer + 6, 4);
 
-            if (part < 0 || part >= total_parts) continue;
+            if (part >= total_parts) continue;
 
             auto now      = std::chrono::system_clock::now();
-            auto now_ms   = std::chrono::time_point_cast<std::chrono::seconds>(now);
-            auto epoch    = now_ms.time_since_epoch();
-            auto value    = std::chrono::duration_cast<std::chrono::seconds>(epoch);
-            long duration = value.count(); // Unix time in second
+            auto epoch    = now.time_since_epoch();
+            long duration = std::chrono::duration_cast<std::chrono::seconds>(epoch).count();
 
             ttl = ttl_max;
 
@@ -126,12 +167,15 @@ void run() {
             if (duration - lastFinishSendTime >= 1) {
                 lastFinishSendTime = duration;
                 snprintf(buffer, 7, "FINISH");
-                sendto(_socket, buffer, 6, 0, reinterpret_cast<sockaddr*>(&broadcast_address), sizeof(broadcast_address));
+                if (sendto(_socket, buffer, 6, 0,
+                           reinterpret_cast<sockaddr*>(&broadcast_address),
+                           sizeof(broadcast_address)) < 0) {
+                    std::cerr << "Warning: Failed to send FINISH" << std::endl;
+                }
             }
         }
-
     }
-    std::cout << "Ok: Process no longer be working" << std::endl;
+    std::cout << "Ok: Transfer session ended" << std::endl;
 
     delete[] buffer;
     delete[] file;

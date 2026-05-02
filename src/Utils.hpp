@@ -3,62 +3,46 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
-#define addr_len int                    //
-#include <winsock2.h>                   // Windows
-#include <windows.h>                    //  socket
-#pragma comment(lib, "Ws2_32.lib")      //
-#define CLOSE_SOCKET(s) closesocket(s)  //
+#define addr_len int
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#pragma comment(lib, "Ws2_32.lib")
+#define CLOSE_SOCKET(s) closesocket(s)
+#define CLEANUP_NETWORK() WSACleanup()
 #else
-#define SOCKET int                      //
-#define SOCKADDR_IN sockaddr_in         //
-#define addr_len socklen_t              // Linux socket
-#define INVALID_SOCKET (-1)             //
-#include <unistd.h>                     //
-#include <arpa/inet.h>                  //
-#define CLOSE_SOCKET(s) close(s)        //
+#define SOCKET int
+#define SOCKADDR_IN sockaddr_in
+#define addr_len socklen_t
+#define INVALID_SOCKET (-1)
+#include <unistd.h>
+#include <arpa/inet.h>
+#define CLOSE_SOCKET(s) close(s)
+#define CLEANUP_NETWORK() ((void)0)
 #endif
 
-#include <thread>
-#include <string>
-#include <fstream>
-#include <cstring> // memcpy
-#include <chrono>
-
-#include <map>
-#include <vector>
-#include <set>
-
-#include "cxxopts.hpp"
-#include "Config.hpp"
-
-
-using namespace std::chrono_literals;
+#include <cstddef>
 
 
 namespace Utils {
     /**
-     * Return a coded number
-     * @param  buffer - bytes array
-     * @param  count  - bytes count
+     * Decode an unsigned integer from a big-endian byte sequence.
      */
-    size_t getNumberFromBytes(char* buffer, int count) {
+    inline size_t getNumberFromBytes(const char* buffer, int count) {
         size_t number = 0;
         for (int i = 0; i < count; i++) {
             number = number << 8;
-            number = number | (buffer[i] & 0xFF);
+            number = number | (static_cast<unsigned char>(buffer[i]));
         }
         return number;
     }
 
     /**
-     * Write a coded number
-     * @param buffer - ptr to write
-     * @param value  - number
-     * @param count  - count bytes
+     * Encode an unsigned integer into a big-endian byte sequence.
      */
-    void writeBytesFromNumber(char* buffer, size_t number, int count) {
+    inline void writeBytesFromNumber(char* buffer, size_t number, int count) {
         for (int i = 0; i < count; i++) {
-            buffer[count - i - 1] = (char) (number >> (i * 8));
+            buffer[count - i - 1] = static_cast<char>(number >> (i * 8));
         }
     }
 }

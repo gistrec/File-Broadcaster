@@ -1,8 +1,25 @@
 #include "cxxopts.hpp"
 #include "Config.hpp"
 
+#include <iostream>
+#include <string>
+#include <cstdlib>
+
+#ifndef FILEBROADCASTER_VERSION
+#define FILEBROADCASTER_VERSION "1.0.0"
+#endif
+
 namespace Receiver { void run(); }
 namespace Sender   { void run(); }
+
+
+static void cleanupAndExit(int code) {
+    if (_socket != INVALID_SOCKET) {
+        CLOSE_SOCKET(_socket);
+    }
+    CLEANUP_NETWORK();
+    std::exit(code);
+}
 
 
 int main(int argc, char* argv[]) {
@@ -14,96 +31,152 @@ int main(int argc, char* argv[]) {
         .show_positional_help();
 
     options.add_options()
-        ("f,file",    "File name",          cxxopts::value<std::string>()->default_value("file.out"))
-        ("t,type",    "Receiver or sender", cxxopts::value<std::string>()->default_value("sender"))
-        ("broadcast", "Broadcast address",  cxxopts::value<std::string>()->default_value("yes"))
-        ("p,port",    "Port",               cxxopts::value<int>()->default_value("33333"))
-        ("mtu",       "MTU packet",         cxxopts::value<int>()->default_value("1500"))
-        ("ttl",       "Time to live",       cxxopts::value<int>()->default_value("15"));
+        ("f,file",     "File name",                             cxxopts::value<std::string>()->default_value("file.out"))
+        ("t,type",     "Receiver or sender",                    cxxopts::value<std::string>()->default_value("sender"))
+        ("broadcast",  "Broadcast address",                     cxxopts::value<std::string>()->default_value("yes"))
+        ("p,port",     "Destination port for outgoing packets", cxxopts::value<int>()->default_value("33333"))
+        ("bind-port",  "Local port to bind on",                 cxxopts::value<int>()->default_value("33333"))
+        ("mtu",        "MTU packet",                            cxxopts::value<int>()->default_value("1500"))
+        ("ttl",        "Time to live",                          cxxopts::value<int>()->default_value("15"))
+        ("h,help",     "Print help")
+        ("version",    "Print version");
 
-    auto result = options.parse(argc, argv);
+    auto result = [&]() -> cxxopts::ParseResult {
+        try {
+            return options.parse(argc, argv);
+        } catch (const cxxopts::exceptions::exception& e) {
+            std::cerr << "Error: " << e.what() << std::endl;
+            std::exit(1);
+        }
+    }();
 
-    #if defined(_WIN32) || defined(_WIN64)   //
-    WORD socketVer;                          // Initializing the use
-    WSADATA wsaData;                         //     of the Winsock DLL
-    socketVer = MAKEWORD(2, 2);              //         by this process.
-    if (WSAStartup(socketVer, &wsaData) != 0) {               //
-        std::cerr << "Error: WSAStartup failed" << std::endl; //
-        exit(1);                                              //
-    }                                                         //
-    #endif                                                    //
+    if (result.count("help")) {
+        std::cout << options.help() << std::endl;
+        return 0;
+    }
+    if (result.count("version")) {
+        std::cout << "File-Broadcaster " << FILEBROADCASTER_VERSION << std::endl;
+        return 0;
+    }
 
-    mtu = result["mtu"].as<int>();               //
-    ttl = result["ttl"].as<int>();               // Initializing some variable
-    ttl_max  = result["ttl"].as<int>();          //
-    fileName = result["file"].as<std::string>(); //
+    // Validate CLI parameters before touching sockets so we can fail fast
+    int parsed_mtu       = result["mtu"].as<int>();
+    int parsed_ttl       = result["ttl"].as<int>();
+    int parsed_port      = result["port"].as<int>();
+    int parsed_bind_port = result["bind-port"].as<int>();
 
+    if (parsed_mtu < 64 || parsed_mtu > 65507) {
+        std::cerr << "Error: --mtu must be between 64 and 65507" << std::endl;
+        return 1;
+    }
+    if (parsed_ttl <= 0) {
+        std::cerr << "Error: --ttl must be greater than 0" << std::endl;
+        return 1;
+    }
+    if (parsed_port <= 0 || parsed_port > 65535) {
+        std::cerr << "Error: --port must be between 1 and 65535" << std::endl;
+        return 1;
+    }
+    if (parsed_bind_port <= 0 || parsed_bind_port > 65535) {
+        std::cerr << "Error: --bind-port must be between 1 and 65535" << std::endl;
+        return 1;
+    }
 
-    _socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);          //
-    if (_socket == INVALID_SOCKET) {                            // Create socket with
-        std::cout << "Error: Can't create socket" << std::endl; //     datagram-based protocol
-        exit(1);                                                //
-    } else {                                                    //
-        std::cout << "Ok: Socket created" << std::endl;         //
-    }                                                           //
+    const std::string type = result["type"].as<std::string>();
+    if (type != "sender" && type != "receiver") {
+        std::cerr << "Error: --type must be 'sender' or 'receiver'" << std::endl;
+        return 1;
+    }
 
-    client_address.sin_family = AF_INET;                         //
-    client_address.sin_port = htons(result["port"].as<int>());   // Creating local address
-    client_address.sin_addr.s_addr = INADDR_ANY;                 //
+    const std::string broadcast_arg = result["broadcast"].as<std::string>();
 
-    memcpy(&server_address, &client_address, sizeof(server_address)); // Server address == Client address
+    #if defined(_WIN32) || defined(_WIN64)
+    WORD socketVer = MAKEWORD(2, 2);
+    WSADATA wsaData;
+    if (WSAStartup(socketVer, &wsaData) != 0) {
+        std::cerr << "Error: WSAStartup failed" << std::endl;
+        return 1;
+    }
+    #endif
 
-    broadcast_address.sin_family = AF_INET;                         // Creating broadcast
-    broadcast_address.sin_port = htons(result["port"].as<int>());   //       address
+    mtu      = parsed_mtu;
+    ttl      = parsed_ttl;
+    ttl_max  = parsed_ttl;
+    fileName = result["file"].as<std::string>();
 
-    if (result["broadcast"].as<std::string>() == "yes") {                      //
-        #if defined(_WIN32) || defined(_WIN64)                                 // Getting access to
-        char broadcastEnable = 1;                                              //  the broadcast address
-        #else                                                                  //
-        int broadcastEnable = 1;                                               //
-        #endif                                                                 //
-                                                                               //
-        if (setsockopt(_socket, SOL_SOCKET, SO_BROADCAST,                      //
-                       &broadcastEnable, sizeof(broadcastEnable)) == 0) {      //
-            std::cout << "Ok: Got access to broadcast" << std::endl;           //
-        } else {                                                               //
-            std::cerr << "Error: Can't get access to broadcast" << std::endl;  //
-            CLOSE_SOCKET(_socket);                                             //
-            exit(1);                                                           //
-        }                                                                      // If parameter "broadcast" is "yes", then
-        broadcast_address.sin_addr.s_addr = INADDR_BROADCAST;                  //    change server address
-    } else {                                                                   //    to broadcast
-        broadcast_address.sin_addr.s_addr =                                    // Else change server address
-            inet_addr(result["broadcast"].as<std::string>().c_str());          //    to address in parameter
-    }                                                                          //
+    _socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if (_socket == INVALID_SOCKET) {
+        std::cerr << "Error: Can't create socket" << std::endl;
+        CLEANUP_NETWORK();
+        return 1;
+    }
+    std::cout << "Ok: Socket created" << std::endl;
 
-    if (bind(_socket, reinterpret_cast<sockaddr*>(&client_address), sizeof(client_address)) == 0) {//
-        std::cout << "Ok: Socket binded" << std::endl;                            //
-    } else {                                                                      // Bind socket to
-        std::cerr << "Error: Can't bind socket" << std::endl;                     //     client address
-        CLOSE_SOCKET(_socket);                                                    //
-        exit(1);                                                                  //
-    }                                                                             //
+    int reuseAddr = 1;
+    if (setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR,
+                   reinterpret_cast<const char*>(&reuseAddr), sizeof(reuseAddr)) != 0) {
+        std::cerr << "Warning: Failed to set SO_REUSEADDR" << std::endl;
+    }
+    #ifdef SO_REUSEPORT
+    int reusePort = 1;
+    if (setsockopt(_socket, SOL_SOCKET, SO_REUSEPORT,
+                   reinterpret_cast<const char*>(&reusePort), sizeof(reusePort)) != 0) {
+        std::cerr << "Warning: Failed to set SO_REUSEPORT" << std::endl;
+    }
+    #endif
 
-    #if defined(_WIN32) || defined(_WIN64)                                      //
-    int tv = 1000;  // user timeout in milliseconds [ms]                        //
-    setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(tv));       // Set socket
-    #else                                                                       // receive timeout
-    struct timeval tv;                                                          //        to 1 sec
-    tv.tv_sec = 1;                                                              //
-    tv.tv_usec = 0;                                                             //
-    setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)); //
+    client_address.sin_family = AF_INET;
+    client_address.sin_port = htons(static_cast<uint16_t>(parsed_bind_port));
+    client_address.sin_addr.s_addr = INADDR_ANY;
+
+    memcpy(&server_address, &client_address, sizeof(server_address));
+
+    broadcast_address.sin_family = AF_INET;
+    broadcast_address.sin_port = htons(static_cast<uint16_t>(parsed_port));
+
+    if (broadcast_arg == "yes") {
+        int broadcastEnable = 1;
+        if (setsockopt(_socket, SOL_SOCKET, SO_BROADCAST,
+                       reinterpret_cast<const char*>(&broadcastEnable),
+                       sizeof(broadcastEnable)) != 0) {
+            std::cerr << "Error: Can't get access to broadcast" << std::endl;
+            cleanupAndExit(1);
+        }
+        std::cout << "Ok: Got access to broadcast" << std::endl;
+        broadcast_address.sin_addr.s_addr = INADDR_BROADCAST;
+    } else {
+        if (inet_pton(AF_INET, broadcast_arg.c_str(), &broadcast_address.sin_addr) != 1) {
+            std::cerr << "Error: --broadcast must be 'yes' or a valid IPv4 address" << std::endl;
+            cleanupAndExit(1);
+        }
+    }
+
+    if (bind(_socket, reinterpret_cast<sockaddr*>(&client_address), sizeof(client_address)) != 0) {
+        std::cerr << "Error: Can't bind socket" << std::endl;
+        cleanupAndExit(1);
+    }
+    std::cout << "Ok: Socket bound" << std::endl;
+
+    #if defined(_WIN32) || defined(_WIN64)
+    DWORD tv = 1000;  // user timeout in milliseconds [ms]
+    setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO,
+               reinterpret_cast<const char*>(&tv), sizeof(tv));
+    #else
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO,
+               reinterpret_cast<const char*>(&tv), sizeof(tv));
     #endif
 
     // Run receiver or sender
-    if (result["type"].as<std::string>() == "receiver") {        //
-        Receiver::run();                                         //
-    } else if (result["type"].as<std::string>() == "sender") {   // Run receiver or sender
-        Sender::run();                                           //            application
-    } else {                                                     //
-        std::cerr << "Error: Type not found" << std::endl;       //
+    if (type == "receiver") {
+        Receiver::run();
+    } else {
+        Sender::run();
     }
 
     CLOSE_SOCKET(_socket);
+    CLEANUP_NETWORK();
     return 0;
 }
