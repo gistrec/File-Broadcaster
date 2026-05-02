@@ -185,6 +185,11 @@ void run() {
                 return;
             }
 
+            // Sender retransmits NEW_PACKET a few times for robustness; if we
+            // already have a buffer for the same size, treat this as a
+            // duplicate and keep accumulated parts.
+            if (file != nullptr && announced == file_length) continue;
+
             file_length = announced;
 
             delete[] file;

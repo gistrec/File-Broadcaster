@@ -100,10 +100,18 @@ void run() {
 
     snprintf(buffer, 11, "NEW_PACKET");
     Utils::writeBytesFromNumber(buffer + 10, file_length, 4);
-    if (sendto(_socket, buffer, 14, 0,
-               reinterpret_cast<sockaddr*>(&broadcast_address),
-               sizeof(broadcast_address)) < 0) {
-        std::cerr << "Warning: Failed to send NEW_PACKET" << std::endl;
+    // NEW_PACKET is sent only once (no RESEND mechanism for it), so a single
+    // dropped packet would strand every receiver. Retransmit a few times to
+    // make the start of the transfer robust to typical LAN loss.
+    for (int i = 0; i < 3; ++i) {
+        if (sendto(_socket, buffer, 14, 0,
+                   reinterpret_cast<sockaddr*>(&broadcast_address),
+                   sizeof(broadcast_address)) < 0) {
+            std::cerr << "Warning: Failed to send NEW_PACKET" << std::endl;
+        }
+        if (i + 1 < 3 && delay_ms > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+        }
     }
 
     std::cout << "Ok: Sent information about new file with size " << file_length << std::endl;

@@ -62,7 +62,7 @@ if(BUILD_TESTING)
         message(STATUS "GTest not found — skipping GTests target")
     endif()
 
-    # E2E loopback test (Linux/macOS only — Winsock SO_REUSEADDR semantics
+    # E2E loopback tests (Linux/macOS only — Winsock SO_REUSEADDR semantics
     # break two-process loopback, see tests/e2e.sh comment).
     if(NOT WIN32)
         add_test(
@@ -72,5 +72,21 @@ if(BUILD_TESTING)
         set_tests_properties(e2e PROPERTIES
             ENVIRONMENT "BINARY=$<TARGET_FILE:FileBroadcaster>"
         )
+
+        # Lossy variant: a Python UDP proxy drops packets in both directions to
+        # exercise the RESEND recovery branch. Skipped if Python 3 is missing.
+        find_package(Python3 COMPONENTS Interpreter QUIET)
+        if(Python3_Interpreter_FOUND)
+            add_test(
+                NAME e2e_lossy
+                COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/e2e_lossy.sh
+            )
+            set_tests_properties(e2e_lossy PROPERTIES
+                ENVIRONMENT "BINARY=$<TARGET_FILE:FileBroadcaster>;PYTHON=${Python3_EXECUTABLE}"
+                TIMEOUT 120
+            )
+        else()
+            message(STATUS "Python 3 not found — skipping e2e_lossy test")
+        endif()
     endif()
 endif()
