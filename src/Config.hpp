@@ -13,6 +13,8 @@ extern int mtu;     // Max packet size to send and receive
 extern int ttl;     // Current wait time for new packages before shutting down
 extern int ttl_max; // Maximum wait time for new packages before shutting down
 
+extern int delay_ms; // Inter-packet pause when blasting parts / RESENDs
+
 extern SOCKET _socket;
 
 extern SOCKADDR_IN server_address;

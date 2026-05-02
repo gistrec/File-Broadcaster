@@ -2,9 +2,10 @@
 
 std::string fileName;
 
-int mtu     = 0;
-int ttl     = 0;
-int ttl_max = 0;
+int mtu      = 0;
+int ttl      = 0;
+int ttl_max  = 0;
+int delay_ms = 0;
 
 SOCKET _socket;
 

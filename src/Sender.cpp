@@ -113,7 +113,7 @@ void run() {
     for (size_t part_index = 0; part_index < total_parts; ++part_index) {
         sent_part.insert({ part_index, 0 });
         sendPart(part_index);
-        std::this_thread::sleep_for(20ms);
+        if (delay_ms > 0) std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
     }
 
     snprintf(buffer, 7, "FINISH");

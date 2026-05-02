@@ -38,9 +38,12 @@ run_test() {
     dd if=/dev/urandom of="$src" bs=1024 count="$size_kb" status=none
 
     # Receiver listens on $recv_port, sends RESEND back to $send_port (sender's bind).
+    # --delay-ms 0 removes the inter-packet pause that the protocol uses on real
+    # LANs to avoid overrunning receivers; on loopback it just slows tests down.
     echo "==> [$label] starting receiver (bind=$recv_port, target=$send_port)"
     "$BINARY" --type receiver --file "$dst" --broadcast 127.0.0.1 \
               --bind-port "$recv_port" --port "$send_port" --ttl "$recv_ttl" \
+              --delay-ms 0 \
         > "$recv_log" 2>&1 &
     local recv_pid=$!
 
@@ -51,6 +54,7 @@ run_test() {
     echo "==> [$label] starting sender (bind=$send_port, target=$recv_port)"
     if ! "$BINARY" --type sender --file "$src" --broadcast 127.0.0.1 \
                    --bind-port "$send_port" --port "$recv_port" --ttl "$send_ttl" \
+                   --delay-ms 0 \
             > "$send_log" 2>&1; then
         echo "FAIL: [$label] sender exited non-zero"
         echo "--- sender log:"; cat "$send_log"
@@ -90,11 +94,11 @@ run_test() {
 
 # Args: label, size_kb, recv_bind_port, send_bind_port, recv_ttl, send_ttl
 #
-# Small file: 50 KiB -> ~35 parts at default MTU 1500, ~0.7s transfer.
-run_test "small" 50    33401 33402 5  3
+# Small file: 50 KiB -> ~35 parts at default MTU 1500.
+run_test "small" 50    33401 33402 3 1
 
-# Large file: 2 MiB -> ~1400 parts at default MTU 1500, ~28s transfer.
-run_test "large" 2048  33403 33404 60 30
+# Large file: 2 MiB -> ~1400 parts at default MTU 1500.
+run_test "large" 2048  33403 33404 3 1
 
 echo
 echo "All E2E tests passed."

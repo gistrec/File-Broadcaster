@@ -59,7 +59,7 @@ void checkParts() {
             sendto(_socket, buffer, 10, 0, reinterpret_cast<sockaddr*>(&broadcast_address),
                    sizeof(broadcast_address));
             std::cout << "Request part of file with index " << index << std::endl;
-            std::this_thread::sleep_for(20ms);
+            if (delay_ms > 0) std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
         }
 
         SOCKADDR_IN sender_address;

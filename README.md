@@ -79,6 +79,7 @@ If your platform isn't covered, see [Building from Source](#building-from-source
 | `--bind-port` | `33333`    | 1..65535 | Local port to bind on |
 | `--mtu`       | `1500`     | 64..65507 | Max packet size in bytes |
 | `--ttl`       | `15`       | > 0 | Seconds of silence before giving up |
+| `--delay-ms`  | `20`       | ≥ 0 | Pause between successive packets (use `0` for loopback / tests) |
 | `-h, --help`  | —          | — | Print help |
 | `--version`   | —          | — | Print version |
 
